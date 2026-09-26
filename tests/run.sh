@@ -60,10 +60,23 @@ for file in "${files[@]}"; do
 	# ten minutes to fail - shows up as silence with no clue where it stopped.
 	# A test that reads stdin must fail, not hang the whole suite.
 	log="$(mktemp "${TMPDIR:-/tmp}/gvm-test-log.XXXXXX")"
-	bash "$file" < /dev/null 2>&1 | tee "$log" | sed 's/^/    /'
+	# A per-file timeout, so one file that hangs costs a minute and reports which
+	# test it was on. `timeout` is GNU; macOS has none unless coreutils is
+	# installed, where it is called gtimeout.
+	runner=""
+	timeout_bin="$(command -v timeout 2> /dev/null || command -v gtimeout 2> /dev/null || true)"
+	[ -n "$timeout_bin" ] && runner="$timeout_bin -k 5 300"
+	progress="$log.progress"
+	: > "$progress"
+	GVM_TEST_TRACE="$progress" $runner bash "$file" < /dev/null 2>&1 |
+		tee "$log" | sed 's/^/    /'
 	status="${PIPESTATUS[0]}"
+	if [ "$status" = "124" ] || [ "$status" = "137" ]; then
+		printf '    TIMEOUT after 300s, last test reached:\n'
+		sed 's/^/      /' "$progress"
+	fi
 	out="$(cat "$log")"
-	rm -f "$log"
+	rm -f "$log" "$progress"
 	line="$(printf '%s\n' "$out" | grep -E '^[0-9]+ passed' | tail -1)"
 	pass="$(printf '%s' "$line" | sed -n 's/^\([0-9]*\) passed.*/\1/p')"
 	fail="$(printf '%s' "$line" | sed -n 's/.*, \([0-9]*\) failed.*/\1/p')"

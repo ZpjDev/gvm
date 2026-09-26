@@ -41,6 +41,13 @@ fi
 t() {
 	GVM_TEST_NAME="$1"
 	GVM_TEST_NAME_SHOWN=0
+	# Appended, not printed: a test file's stdout is block-buffered when run.sh
+	# pipes it, so a file that hangs has its last few lines still sitting in a
+	# buffer and the log ends at whatever fitted in 4KB. This goes to a file as
+	# each test starts, so a hang says which test hung.
+	if [ -n "${GVM_TEST_TRACE:-}" ]; then
+		printf '%s\n' "$GVM_TEST_NAME" >> "$GVM_TEST_TRACE" 2> /dev/null
+	fi
 }
 
 # _gvm_test_label
