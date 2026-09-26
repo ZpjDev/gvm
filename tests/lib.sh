@@ -246,7 +246,7 @@ gvm_test_watch_real_profiles() {
 	# after pointing HOME somewhere else must keep watching the developer's real
 	# home, which is the whole point.
 	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && return 0
-	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}"/gvm-home.XXXXXX)"
+	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp -d "$GVM_TEST_TMPBASE"/gvm-home.XXXXXX)"
 	: > "$GVM_TEST_PROFILE_SNAPSHOT/manifest"
 	local f n=0
 	for f in .bashrc .zshrc .profile .bash_profile .zprofile .zshenv; do
@@ -283,10 +283,7 @@ gvm_test_profiles_unchanged() {
 gvm_test_sandbox() {
 	local root
 	gvm_test_watch_real_profiles
-	# Strip the trailing slash first: macOS sets TMPDIR to .../T/ with one, and
-# "${TMPDIR}/gvm-test.XXXXXX" then has a // in it that shows up in every
-# expected path in the suite.
-root="$(mktemp -d "${TMPDIR:-/tmp}"/gvm-test.XXXXXX)"
+	root="$(mktemp -d "$GVM_TEST_TMPBASE"/gvm-test.XXXXXX)"
 	ln -s "$GVM_SOURCE_ROOT/scripts" "$root/scripts"
 	ln -s "$GVM_SOURCE_ROOT/bin" "$root/bin"
 	mkdir -p "$root/logs" "$root/gos" "$root/archive/package" \
@@ -360,6 +357,23 @@ export GOTOOLCHAIN; GOTOOLCHAIN="local"
 ENVEOF
 	mkdir -p "$root/pkgsets/$version/global/overlay/bin"
 }
+
+# macOS sets TMPDIR to .../T/ - with the trailing slash - so anything built as
+# "${TMPDIR}/name" ends up with a // in it. That is not cosmetic here: several
+# tests compare a path built from the sandbox root against the output of pwd,
+# and pwd collapses the double slash, so the two disagree on macOS only.
+GVM_TEST_TMPBASE="${TMPDIR:-/tmp}"
+while [ "${GVM_TEST_TMPBASE}" != "/" ] && [ "${GVM_TEST_TMPBASE%/}" != "${GVM_TEST_TMPBASE}" ]
+do
+	GVM_TEST_TMPBASE="${GVM_TEST_TMPBASE%/}"
+done
+# Then resolve symlinks in it, once, here rather than in each test. gvm's own
+# scripts work out GVM_ROOT from the physical location of the file they were
+# sourced from, so a test that compares a path built out of TMPDIR against
+# something gvm reported has both ends spelled the same way - which is what
+# macOS needs, where $TMPDIR is under /var and /var is a symlink to
+# /private/var. Everything derived from this is physical from here on.
+GVM_TEST_TMPBASE="$(cd "$GVM_TEST_TMPBASE" && pwd -P)"
 
 gvm_test_sandbox_teardown() {
 	local status=0

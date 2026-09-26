@@ -58,6 +58,11 @@ list, the installer and the test suite were replaced, not patched.
   before the version was selected - on every `gvm use`, and, because the user's
   shell is where that happens, on the way in. Same shape in `gvm pkgsetuse` and
   in `munge_path`'s PATH assembly. 23 expansions now carry a default.
+- macOS puts `TMPDIR` under `/var`, which is a symlink to `/private/var`, and
+  ends it with a slash. The test harness resolved neither, so a path built from
+  `TMPDIR` and a path gvm reported for the same directory were spelled
+  differently and three cd assertions failed on macOS only. The harness strips
+  the slash and resolves symlinks once, up front.
 - The four `display_*` helpers assume they were given a message, so a caller
   that passes an empty list kills the shell instead of reporting the problem -
   on bash 3.2 under `set -u`, which is the shell the message was for. They
