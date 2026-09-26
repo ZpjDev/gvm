@@ -1,19 +1,19 @@
 # Changelog
 
-This fork's changes, relative to upstream [moovweb/gvm](https://github.com/moovweb/gvm)
-1.0.22 (2016). Upstream history before that is in its own repository; nothing
-here changes the interface, only how it works and what it gets right.
+Changes from 1.0.22 (2016), whose history is in this repository before that
+release. Nothing here changes the interface, only how it works and what it gets
+right.
 
 ## 1.1.0 - 2026-09-26
 
-First release of the fork. Version 1.1.0 rather than 1.0.23 because the release
-list, the installer and the test suite were replaced, not patched.
+Version 1.1.0 rather than 1.0.23 because the release list, the installer and
+the test suite were replaced, not patched.
 
 ### Release data
 
 - The release list is fetched from `https://go.dev/dl/?mode=json&include=all`
   instead of being a file in the repository, so `gvm install 1.24` finds patch
-  releases published after this repository was forked. `GVM_INDEX_FILE` points
+  releases published after the bundled list was last edited. `GVM_INDEX_FILE` points
   at a parsed index for air-gapped machines, `GVM_OFFLINE=1` reuses the cache
   and does not refresh it, and `GVM_NO_CACHE=1` forces a refresh.
 - Platform artifacts are chosen from the index, so an OS/architecture without a
@@ -66,6 +66,11 @@ list, the installer and the test suite were replaced, not patched.
   `sha256sum` directly to checksum its own fixture; macOS has `shasum` and no
   `sha256sum`, and a pipeline through `cut` hid the failure, so the index went
   out with an empty checksum. It uses gvm's own `gvm_checksum_file` now.
+- The test suite dropped every `GVM_*` variable it inherited, so it can be run
+  from a shell that has gvm sourced. `GVM_SOURCED=1` alone makes `scripts/gvm`
+  return on sight, and the suite went through testing nothing: it failed on any
+  machine with gvm installed and passed in CI, which has no `GVM_*` in its
+  environment at all.
 - macOS puts `TMPDIR` under `/var`, which is a symlink to `/private/var`, and
   ends it with a slash. The test harness resolved neither, so a path built from
   `TMPDIR` and a path gvm reported for the same directory were spelled

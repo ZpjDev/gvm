@@ -23,8 +23,8 @@ unset __gvm_bootstrap_self
 
 if [ -z "$__gvm_bootstrap_root" ]; then
 	echo "gvm: could not work out where this installation lives." >&2
-	echo "Reinstall with:  bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)" >&2
-	echo "or download https://github.com/ZpjDev/gvm and run its install.sh." >&2
+	echo "Reinstall with:  bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)" >&2
+	echo "or download https://github.com/moovweb/gvm and run its install.sh." >&2
 	return 1 2> /dev/null || exit 1
 fi
 

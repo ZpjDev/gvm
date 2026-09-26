@@ -20,7 +20,7 @@ elif [[ -n $command ]]; then
 else
   echo "= gvm pkgset
 
-* https://github.com/ZpjDev/gvm
+* https://github.com/moovweb/gvm
 
 == DESCRIPTION:
 

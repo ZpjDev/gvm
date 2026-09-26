@@ -6,11 +6,6 @@ A Go version manager, in the shape nvm made familiar: `gvm install stable`,
 `gvm use stable`, and a directory of Go trees you can switch between without
 touching your project.
 
-> **This repository is a fork.** It is [ZpjDev/gvm](https://github.com/ZpjDev/gvm),
-> a maintained fork of [moovweb/gvm](https://github.com/moovweb/gvm), which is
-> the original project and still the place to report upstream-specific issues.
-> The commands, the layout and the install path are the same; the differences
-> are listed under [What changed in this fork](#what-changed-in-this-fork).
 
 ```console
 $ gvm install 1.24
@@ -29,13 +24,13 @@ go version go1.24.13 linux/amd64
 Nothing to build. One of these:
 
 ```console
-$ bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)
+$ bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 ```
 
 Or from a checkout:
 
 ```console
-$ git clone https://github.com/ZpjDev/gvm.git
+$ git clone https://github.com/moovweb/gvm.git
 $ cd gvm
 $ ./install.sh
 ```
@@ -262,10 +257,12 @@ it selects a version. Without that, a `go.mod` saying `go 1.30` would send the
 toolchain off to fetch Go 1.30 and quietly ignore the version you selected.
 Set `GOTOOLCHAIN` yourself if you would rather Go managed that.
 
-## What changed in this fork
+## What changed in 1.1.0
 
-Upstream 1.0.22 is from 2016 and its release list is a file in the repository.
-This fork is a rewrite of the parts that had aged, keeping the interface:
+1.0.22 is from 2016 and its release list is a file in the repository, so a
+`gvm install 1.24` could only find the patch releases that existed when the
+file was last edited. This is a rewrite of the parts that had aged, keeping the
+interface:
 
 - **Releases come from [go.dev](https://go.dev/dl).** `gvm install 1.24`
   resolves to the newest `go1.24.x` that was actually published, including
@@ -339,5 +336,5 @@ lists - files, help text, and what is advertised - stop agreeing.
 
 ## License
 
-MIT, unchanged from upstream: `LICENSE` is Moov Corp.'s, and this fork keeps it.
-See [What changed in this fork](#what-changed-in-this-fork) for the differences.
+MIT, unchanged: `LICENSE` is Moov Corp.'s and is not touched here.
+See [What changed in 1.1.0](#what-changed-in-110) for the details.

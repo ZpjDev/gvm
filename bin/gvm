@@ -21,7 +21,7 @@ if [ -z "${GVM_ROOT:-}" ]; then
 	echo '    [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >&2
 	echo >&2
 	echo 'Or install gvm with:' >&2
-	echo '    bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)' >&2
+	echo '    bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)' >&2
 	tput sgr0 2> /dev/null
 	exit 1
 fi

@@ -2,7 +2,7 @@
 #
 # gvm-installer - the one-liner installer.
 #
-#   bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)
+#   bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 #
 # The previous version cloned the repository, renamed .git to git.bak, guessed a
 # profile with `finger`, and then overwrote scripts/gvm with two generated lines
@@ -12,8 +12,8 @@
 
 set -u
 
-repo="${GVM_REPO:-https://github.com/ZpjDev/gvm}"
-raw="https://raw.githubusercontent.com/ZpjDev/gvm"
+repo="${GVM_REPO:-https://github.com/moovweb/gvm}"
+raw="https://raw.githubusercontent.com/moovweb/gvm"
 
 display_error() {
 	printf 'ERROR: %s\n' "$1" >&2

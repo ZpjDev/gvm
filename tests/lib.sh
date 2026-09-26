@@ -281,7 +281,22 @@ gvm_test_profiles_unchanged() {
 }
 
 gvm_test_sandbox() {
-	local root
+	local root leaked
+	# Drop every GVM_* the developer brought in with them. Somebody who has gvm
+	# sourced in their own shell exports GVM_SOURCED=1 and GVM_ROOT, and
+	# scripts/gvm returns on sight when it sees GVM_SOURCED, so the suite went
+	# through testing nothing: 12 and 16 failed on a laptop with gvm installed
+	# and passed in CI, which has no GVM_* in its environment. A test suite that
+	# only works on a machine without the thing installed is not a test suite.
+	# Tests set the variables they need after this, so nothing is lost. The
+	# harness's own GVM_TEST_* and GVM_SOURCE_ROOT stay: they describe the copy
+	# of gvm under test, not the one the developer has installed.
+	for leaked in $(env | sed -n 's/^\(GVM[A-Za-z0-9_]*\)=.*/\1/p'); do
+		case "$leaked" in
+			GVM_TEST_* | GVM_SOURCE_ROOT) continue ;;
+		esac
+		unset "$leaked"
+	done
 	gvm_test_watch_real_profiles
 	root="$(mktemp -d "$GVM_TEST_TMPBASE"/gvm-test.XXXXXX)"
 	ln -s "$GVM_SOURCE_ROOT/scripts" "$root/scripts"

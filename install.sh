@@ -333,7 +333,7 @@ else
 		exit 1
 	}
 
-	repo="${GVM_REPO:-https://github.com/ZpjDev/gvm.git}"
+	repo="${GVM_REPO:-https://github.com/moovweb/gvm.git}"
 	mkdir -p "$prefix" || {
 		display_error "Could not create $prefix"
 		exit 1

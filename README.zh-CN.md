@@ -5,10 +5,6 @@
 一个 Go 版本管理器，用法照搬大家熟悉的 nvm：`gvm install stable`、
 `gvm use stable`，把各个 Go 版本放在一个目录里随你切换，不用动你的项目。
 
-> **本仓库是一个 fork。** 它是 [ZpjDev/gvm](https://github.com/ZpjDev/gvm)，
-> 即 [moovweb/gvm](https://github.com/moovweb/gvm)（原项目）的维护分支；上游已经
-> 不再更新，涉及上游本身的问题请去原仓库提。命令、目录结构和安装方式和原来一致，
-> 区别列在 [这个 fork 改了什么](#这个-fork-改了什么)。
 
 ```console
 $ gvm install 1.24
@@ -27,13 +23,13 @@ go version go1.24.13 linux/amd64
 不需要编译。任选一种：
 
 ```console
-$ bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)
+$ bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 ```
 
 或者从源码装：
 
 ```console
-$ git clone https://github.com/ZpjDev/gvm.git
+$ git clone https://github.com/moovweb/gvm.git
 $ cd gvm
 $ ./install.sh
 ```
@@ -248,9 +244,9 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
 `go 1.30` 的 `go.mod` 会让工具链自己去抓一个 Go 1.30，然后你选的那个版本就被
 悄悄忽略了。如果你更想让 Go 自己管这件事，自行设置 `GOTOOLCHAIN` 即可。
 
-## 这个 fork 改了什么
+## 1.1.0 改了什么
 
-上游 1.0.22 是 2016 年的版本，发布列表是仓库里的一个文件。这个 fork 重写了其中
+1.0.22 是 2016 年的版本，发布列表是仓库里的一个文件。这次重写了其中
 已经老化的部分，命令行接口保持不变：
 
 - **发布信息来自 [go.dev](https://go.dev/dl)。** `gvm install 1.24` 会解析成
@@ -319,4 +315,4 @@ $ TMPDIR=/tmp/varlink/ bash tests/run.sh        # ... 而且位于 /var -> /priv
 
 ## 许可
 
-MIT，与上游一致：`LICENSE` 是 Moov Corp. 的，本 fork 原样保留。
+MIT，未作改动：`LICENSE` 属于 Moov Corp.，这里不动它。
