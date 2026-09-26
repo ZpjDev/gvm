@@ -1,210 +1,322 @@
 # gvm
 
-[![Build Status](https://travis-ci.org/moovweb/gvm.svg?branch=master)](https://travis-ci.org/moovweb/gvm)
+English | [简体中文](./README.zh-CN.md)
 
-By Josh Bussdieker (jbuss, jaja, jbussdieker) while working at [Moovweb](https://www.moovweb.com)
+A Go version manager, in the shape nvm made familiar: `gvm install stable`,
+`gvm use stable`, and a directory of Go trees you can switch between without
+touching your project.
 
-Currently lovingly maintained by [Benjamin Knigge](https://github.com/BenKnigge)
+> **This repository is a fork.** It is [ZpjDev/gvm](https://github.com/ZpjDev/gvm),
+> a maintained fork of [moovweb/gvm](https://github.com/moovweb/gvm), which is
+> the original project and still the place to report upstream-specific issues.
+> The commands, the layout and the install path are the same; the differences
+> are listed under [What changed in this fork](#what-changed-in-this-fork).
 
-Pull requests and other any other contributions would be very much appreciated.
+```console
+$ gvm install 1.24
+Downloading go1.24.13.linux-amd64.tar.gz
+go1.24.13 successfully installed
 
-GVM provides an interface to manage Go versions.
+$ gvm use 1.24
+Now using version go1.24.13
 
-Features
-========
-* Install/Uninstall Go versions with `gvm install [tag]` where tag is "60.3", "go1", "weekly.2011-11-08", or "tip"
-* List added/removed files in GOROOT with `gvm diff`
-* Manage GOPATHs with `gvm pkgset [create/use/delete] [name]`. Use `--local` as `name` to manage repository under local path (`/path/to/repo/.gvm_local`).
-* List latest release tags with `gvm listall`. Use `--all` to list weekly as well.
-* Cache a clean copy of the latest Go source for multiple version installs.
-* Link project directories into GOPATH
-
-Background
-==========
-When we started developing in Go mismatched dependencies and API changes plagued our build process and made it extremely difficult to merge with other peoples changes.
-
-After nuking my entire GOROOT several times and rebuilding I decided to come up with a tool to oversee the process. It eventually evolved into what gvm is today.
-
-Installing
-==========
-
-To install:
-
-1.  Install [Bison](https://www.gnu.org/software/bison/):
-
-    ```
-    sudo apt-get install bison
-    ```
-
-1.  Install gvm:
-
-    ```
-    bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-    ```
-
-Or if you are using zsh just change `bash` with `zsh`
-
-Installing Go
-=============
-    gvm install go1.4
-    gvm use go1.4 [--default]
-Once this is done Go will be in the path and ready to use. $GOROOT and $GOPATH are set automatically.
-
-Additional options can be specified when installing Go:
-
-    Usage: gvm install [version] [options]
-        -s,  --source=SOURCE      Install Go from specified source.
-        -n,  --name=NAME          Override the default name for this version.
-        -pb, --with-protobuf      Install Go protocol buffers.
-        -b,  --with-build-tools   Install package build tools.
-        -B,  --binary             Only install from binary.
-             --prefer-binary      Attempt a binary install, falling back to source.
-        -h,  --help               Display this message.
-        
-### A Note on Compiling Go 1.5+
-Go 1.5+ removed the C compilers from the toolchain and [replaced][compiler_note] them with one written in Go. Obviously, this creates a bootstrapping problem if you don't already have a working Go install. In order to compile Go 1.5+, make sure Go 1.4 is installed first. If Go 1.4 won't install try a later version (e.g. go1.5), just make sure you have the `-B` option after the version number. 
-
-```
-gvm install go1.4 -B
-gvm use go1.4
-export GOROOT_BOOTSTRAP=$GOROOT
-gvm install go1.7
+$ go version
+go version go1.24.13 linux/amd64
 ```
 
-### A Note on ARMv6 and ARMv7 architectures (32 bit)
-Binary versions for ARMv6 architecture are available [starting from Go 1.6](https://go.dev/dl/#go1.6). So, it is necessary to bootstrap with an existing binary version, then it will be possible compiling other versions. For instance, to bootstrap a setup, version `1.21.0` may be used:
+## Installing
 
-```
-gvm install go1.21.0 -B
-gvm use go1.21.0
-```
+Nothing to build. One of these:
 
-And then, compile any other version:
-
-```
-gvm install go1.20.7
+```console
+$ bash <(curl -sSL https://raw.githubusercontent.com/ZpjDev/gvm/master/binscripts/gvm-installer)
 ```
 
-#### To install Go 1.20+
-Go 1.20+ requires go1.17.3+. Use the below:
+Or from a checkout:
 
-```
-gvm install go1.4 -B
-gvm use go1.4
-export GOROOT_BOOTSTRAP=$GOROOT
-gvm install go1.17.13
-gvm use go1.17.13
-export GOROOT_BOOTSTRAP=$GOROOT
-gvm install go1.20
-gvm use go1.20
+```console
+$ git clone https://github.com/ZpjDev/gvm.git
+$ cd gvm
+$ ./install.sh
 ```
 
-[compiler_note]: https://docs.google.com/document/d/1OaatvGhEAq7VseQ9kkavxKNAfepWy2yhPUBs96FGV28/edit
+Or with make, if you prefer:
 
-List Go Versions
-================
-To list all installed Go versions (The current version is prefixed with "=>"):
-
-    gvm list
-
-To list all Go versions available for download:
-
-    gvm listall
-
-Uninstalling
-============
-To completely remove gvm and all installed Go versions and packages:
-
-    gvm implode
-
-If that doesn't work see the troubleshooting steps at the bottom of this page.
-
-Mac OS X Requirements
-====================
- * Install Mercurial from https://www.mercurial-scm.org/downloads
- * Install Xcode Command Line Tools from the App Store.
-
-```
-xcode-select --install
-brew update
-brew install mercurial
+```console
+$ make install                      # into ~/.gvm
+$ make install PREFIX=~/go/gvm
 ```
 
-Linux Requirements
-==================
+The installer puts gvm in `~/.gvm` by default, adds one line to your shell
+profile, and leaves everything else alone. It refuses to install over a
+directory that is not already a gvm, so `--force` is a deliberate word.
 
-Debian/Ubuntu
-==================
-    sudo apt-get install curl git mercurial make binutils bison gcc build-essential
+| Flag | Effect |
+| --- | --- |
+| `--prefix <dir>` | Where to install. Default `~/.gvm` |
+| `--profile <file>` | Update this profile instead of guessing |
+| `--no-profile` | Do not touch any profile |
+| `--force` | Reinstall over an existing gvm |
+| `--no-clone` | Install from the checkout you are standing in |
+| `--uninstall` | Remove gvm; keeps `$PREFIX/gos` with `--force` |
 
-Redhat/Centos
-==================
+The profile line is:
 
-    sudo yum install curl
-    sudo yum install git
-    sudo yum install make
-    sudo yum install bison
-    sudo yum install gcc
-    sudo yum install glibc-devel
+```bash
+[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
+```
 
- * Install Mercurial from http://pkgs.repoforge.org/mercurial/
+`scripts/gvm` works out `GVM_ROOT` from its own location, so you can move or
+symlink the directory without editing your profile. `gvm implode` takes the
+line back out again and leaves a `.gvm-backup` beside it.
 
-FreeBSD Requirements
-====================
+Works in bash and zsh; the profile line goes into whichever one the installer
+finds. Requirements: `bash` 3.2+ (or zsh 5+), `tar`, `gzip`, `awk`, `sed`, and a
+SHA256 utility
+(`sha256sum` or `shasum`). `curl` is needed to download, and `make` plus a C
+compiler only for source builds. `gvm doctor` checks all of it.
 
-    sudo pkg_add -r bash
-    sudo pkg_add -r git
-    sudo pkg_add -r mercurial
+## Using it
 
-Vendoring Native Code and Dependencies
-==================================================
-GVM supports vendoring package set-specific native code and related
-dependencies, which is useful if you need to qualify a new configuration
-or version of one of these dependencies against a last-known-good version
-in an isolated manner.  Such behavior is critical to maintaining good release
-engineering and production environment hygiene.
+### Versions
 
-As a convenience matter, GVM will furnish the following environment variables to
-aid in this manner if you want to decouple your work from what the operating
-system provides:
+```console
+$ gvm ls                    # installed versions and aliases
+$ gvm ls-remote 1.24        # published releases
+$ gvm use 1.24              # newest installed go1.24.x
+$ gvm use go1.24.13         # exactly this one
+$ gvm use stable            # newest stable, installed or not
+$ gvm which                 # the GOROOT in effect
+$ gvm which 1.24 go         # the path to that version's `go`
+$ gvm current               # the selected version
+```
 
-1. ``${GVM_OVERLAY_PREFIX}`` functions in a manner akin to a root directory
-  hierarchy suitable for auto{conf,make,tools} where it could be passed in
-  to ``./configure --prefix=${GVM_OVERLAY_PREFIX}`` and not conflict with any
-  existing operating system artifacts and hermetically be used by your
-  workspace.  This is suitable to use with ``C{PP,XX}FLAGS and LDFLAGS``, but you will have
-  to manage these yourself, since each tool that uses them is different.
+`gvm install` takes the same arguments: a full version, a partial one, or an
+alias. `gvm use` only ever selects something already installed; it will tell you
+to install a version rather than fetching one behind your back.
 
-2. ``${PATH}`` includes ``${GVM_OVERLAY_PREFIX}/bin`` so that any tools you
-  manually install will reside there, available for you.
+### The names gvm understands
 
-3. ``${LD_LIBRARY_PATH}`` includes ``${GVM_OVERLAY_PREFIX}/lib`` so that any
-  runtime library searching can be fulfilled there on FreeBSD and Linux.
+| Name | Meaning |
+| --- | --- |
+| `1.24.13`, `go1.24.13` | Exactly that release |
+| `1.24`, `1.24.*` | The newest `go1.24.x` |
+| `1.24.0rc1` | That release candidate |
+| `stable`, `latest` | The newest stable release |
+| `unstable` | The newest beta or release candidate |
+| `newest` | The newest release of any kind |
+| `oldest` | The oldest stable release gvm knows about |
+| `default` | Whatever `gvm use --default` recorded |
+| `system` | The Go already on your `PATH`, unmanaged |
 
-4. ``${DYLD_LIBRARY_PATH}`` includes ``${GVM_OVERLAY_PREFIX}/lib`` so that any
-  runtime library searching can be fulfilled there on Mac OS X.
+Pre-releases are only ever selected on purpose. Asking for `1.25` when no stable
+`go1.25.x` is installed picks the newest stable; if it can only find a release
+candidate, it says so before switching.
 
-5. ``${PKG_CONFIG_PATH}`` includes ``${GVM_OVERLAY_PREFIX}/lib/pkgconfig`` so
-  that ``pkg-config`` can automatically resolve any vendored dependencies.
+### Aliases
 
-Recipe for success:
+```console
+$ gvm alias create work 1.24
+$ gvm use work
+$ gvm alias list
+$ gvm alias delete work
+```
 
-    gvm use go1.1
-    gvm pkgset use current-known-good
-    # Let's assume that this includes some C headers and native libraries, which
-    # Go's CGO facility wraps for us.  Let's assume that these native
-    # dependencies are at version V.
-    gvm pkgset create trial-next-version
-    # Let's assume that V+1 has come along and you want to safely trial it in
-    # your workspace.
-    gvm pkgset use trial-next-version
-    # Do your work here replicating current-known-good from above, but install
-    # V+1 into ${GVM_OVERLAY_PREFIX}.
+Aliases can point at versions or at other aliases, including the built-in ones,
+so `gvm alias create mine stable` works. A cycle is refused rather than followed.
 
-See examples/native for a working example.
+### Per-directory versions
 
-Troubleshooting
-===============
-Sometimes especially during upgrades the state of gvm's files can get mixed up. This is mostly true for upgrade from older version than 0.0.8. Changes are slowing down and a LTR is imminent. But for now `rm -rf ~/.gvm` will always remove gvm. Stay tuned!
+Drop a `.go-version` in a project and gvm switches as you `cd` in:
 
-[![Gitter](https://badges.gitter.im/GoVesionManager/community.svg)](https://gitter.im/GoVesionManager/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+```console
+$ cat .go-version
+1.24.13
+$ cat .go-pkgset        # optional, selects a package set too
+myproject
+```
+
+The file is searched for upwards from the current directory, so a monorepo can
+have one at the root. The hook is installed with the profile; a shell that
+already has a `cd` override keeps it.
+
+`gvm applymod` reads the `go` directive out of a `go.mod` and switches to
+something that satisfies it, treating it as a minimum the way Go does:
+
+```console
+$ gvm applymod
+go.mod asks for go1.24.0
+Now using version go1.24.13
+```
+
+It will not download anything: if nothing suitable is installed it prints the
+`gvm install` line to run instead.
+
+### Package sets
+
+`GOPATH` moved from being one-per-machine to one-per-project:
+
+```console
+$ gvm pkgset create myproject
+$ gvm use 1.24@myproject
+$ gvm pkgset list
+$ gvm pkgenv myproject     # print the environment; --edit to open $EDITOR
+```
+
+`gvm linkthis` symlinks the current directory into `GOPATH/src` for the old
+GOPATH workflow.
+
+### Source builds
+
+```console
+$ gvm install 1.25 --source
+```
+
+`--source` builds from `go.dev/dl` source rather than downloading a binary. It
+needs a bootstrap toolchain, which gvm installs for you: the oldest supported
+release of each series is pinned, and Go 1.26+ uses the even-numbered minor
+release. Override it with `GOROOT_BOOTSTRAP` if you want to:
+
+```console
+$ GOROOT_BOOTSTRAP=$HOME/sdk/go1.24.6 gvm install 1.26 --source
+```
+
+Building the development tree is a git operation and needs a full C toolchain:
+
+```console
+$ gvm install master --from-git
+```
+
+That clones `golang/go` shallowly at the ref you name and builds it. It is the
+only path that uses git, and it is slow on purpose.
+
+### Cross compilation
+
+gvm does not keep a tree per platform. Build for another one with the toolchain
+you have:
+
+```console
+$ GOOS=darwin GOARCH=arm64 go build ./...
+$ GOOS=windows GOARCH=amd64 go build -o app.exe .
+```
+
+If you want a genuinely separate toolchain per platform, the Go team ships
+[`golang.org/dl`](https://pkg.go.dev/golang.org/dl), which manages its own
+downloads:
+
+```console
+$ go install golang.org/dl/go1.24.13@latest
+$ go1.24.13 download
+```
+
+### Keeping Go honest
+
+`gvm diff` reports what changed inside an installed tree, against the file list
+recorded at install time:
+
+```console
+$ gvm diff 1.24
+WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
+  added:
+    + ./src/handwritten.go
+```
+
+`gvm doctor` reports on the installation and on the tools a command needs.
+
+## Security
+
+- Every artifact is checked against the SHA256 in the Go release index before it
+  is unpacked. `GVM_NO_VERIFY=1` disables that and is not recommended.
+- The index comes from `go.dev/dl`, and can be pinned with `GVM_INDEX_FILE` (a
+  parsed TSV, not raw JSON) for air-gapped machines. `GVM_OFFLINE=1` keeps an
+  existing cache without refreshing it; `GVM_OFFLINE=0` is not offline.
+- `gvm implode`, the one command that deletes a whole tree, refuses a
+  `GVM_ROOT` that does not have both `scripts/` and `VERSION`, and only prompts
+  when there is a terminal, so a script gets an error instead of a hang.
+- `gvm uninstall` refuses to remove the version currently in use unless forced.
+- `gvm install <version> --force` replaces the GOROOT and nothing else. Your
+  package set survives, which matters because that is where the module cache and
+  everything `go get` built live: reinstalling a version is how you recover from
+  a corrupted Go tree, and it should not also cost you the download cache.
+
+## Environment variables
+
+| Variable | Effect |
+| --- | --- |
+| `GVM_ROOT` | Where gvm is installed. Set by the profile line; do not set by hand |
+| `GVM_OFFLINE` | Never refresh the release index |
+| `GVM_DL_BASE_URL` | Fetch artifacts from a mirror instead of `go.dev` |
+| `GVM_NO_VERIFY` | Skip checksum verification |
+| `GOROOT_BOOTSTRAP` | Toolchain used to build a source install |
+| `GVM_QUIET` | Say less |
+| `GVM_DEBUG` | Trace the internals |
+
+The boolean ones read `1`/`true`/`yes`/`on` and `0`/`false`/`no`/`off`, so
+`GVM_NO_VERIFY=0` still verifies. Anything else is reported and treated as false.
+
+## How it works
+
+`GOTOOLCHAIN` is the one thing that behaves differently here. Modern Go can
+download and switch toolchains by itself, so gvm sets `GOTOOLCHAIN=local` when
+it selects a version. Without that, a `go.mod` saying `go 1.30` would send the
+toolchain off to fetch Go 1.30 and quietly ignore the version you selected.
+Set `GOTOOLCHAIN` yourself if you would rather Go managed that.
+
+## What changed in this fork
+
+Upstream 1.0.22 is from 2016 and its release list is a file in the repository.
+This fork is a rewrite of the parts that had aged, keeping the interface:
+
+- **Releases come from [go.dev](https://go.dev/dl).** `gvm install 1.24`
+  resolves to the newest `go1.24.x` that was actually published, including
+  patch releases newer than this repository's last commit, and picks the right
+  artifact for your platform. `GVM_INDEX_FILE` pins a parsed index and
+  `GVM_OFFLINE=1` reuses the cache, for machines that cannot reach the network.
+- **Downloads are verified.** SHA256 for every artifact, refused on mismatch
+  unless `GVM_NO_VERIFY=1` is set explicitly.
+- **`GOTOOLCHAIN=local` while a gvm version is selected**, so a `go.mod`
+  asking for a newer Go cannot make the selected toolchain quietly fetch and use
+  that one instead.
+- **zsh is supported and tested**, not just bash, and paths containing spaces
+  work everywhere (`GVM_ROOT="/opt/my gvm"`).
+- **The installer no longer needs autotools or Ruby.** It installs from a
+  checkout without cloning over it, refuses to delete a gvm that is in use, and
+  `--uninstall` honours `--no-profile`. Reinstalling a version with `--force`
+  keeps its package set, so recovering from a broken Go tree does not cost you
+  the module cache.
+- **New commands**: `gvm doctor` (what is wrong with this installation),
+  `gvm ls-remote` (what is published), `gvm applymod` (switch to whatever a
+  `go.mod` asks for, treating it as the minimum it is), `gvm which`, `gvm
+  delete`, and a rewritten `gvm diff` and `gvm help`.
+- **The test suite** is 660 assertions of plain bash with no framework, each
+  file building its own throwaway `GVM_ROOT`. It also fails if a test writes to
+  your real `~/.bashrc` or `~/.zshrc`. GitHub Actions runs it on Linux and on
+  macOS, whose `bash` is 3.2.
+- **A Chinese README** ([简体中文](./README.zh-CN.md)) and a proper `CHANGELOG`.
+
+Bugs fixed that are worth calling out, because they were silent: `gvm implode`
+deleted a `GVM_ROOT` that was your `$HOME`; `gvm uninstall` removed the version
+you were using and left `environments/default` pointing at nothing; and
+`gvm install --force` emptied the package set of the version it was reinstalling.
+
+## Development
+
+```console
+$ make test          # the whole suite, in throwaway sandboxes
+$ make lint          # parse every shell script
+$ ./tests/run.sh     # the same thing
+```
+
+Each test file is standalone, needs no framework, and builds its own `GVM_ROOT`
+under `/tmp`, so the suite never touches a real installation. Tests that need
+the release index pin it to a fixture.
+
+The layout is flat on purpose: `bin/gvm` dispatches by file name, so a command
+is `scripts/<name>` and a shell function is `scripts/env/<name>`. `make lint`
+and the help-consistency test in `tests/09_cli_test.sh` both fail if the three
+lists - files, help text, and what is advertised - stop agreeing.
+
+## License
+
+MIT, unchanged from upstream: `LICENSE` is Moov Corp.'s, and this fork keeps it.
+See [What changed in this fork](#what-changed-in-this-fork) for the differences.

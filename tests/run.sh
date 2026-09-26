@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+# tests/run.sh - run the whole suite.
+#
+# The old suite needed moovweb's "tf" framework installed separately, shelled out
+# to Ruby once per assertion, and downloaded real Go toolchains (go1.4.3,
+# go1.6.4, go1.7.6) to test against. These tests need nothing but bash, awk, tar
+# and a loopback HTTP server, and they run in a throwaway GVM_ROOT.
+#
+# Usage: tests/run.sh [pattern...]
+
+set -u
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
+
+# The suite must never be able to reach the GVM installation of whoever is
+# running it. Inheriting GVM_ROOT, GOROOT or a `gvm` on PATH is exactly how the
+# old suite ended up testing the wrong thing.
+unset GVM_ROOT GOROOT GOPATH GOBIN GOOS GOARCH GVM_VERSION
+unset gvm_go_name gvm_pkgset_name GVM_INDEX_FILE GVM_DL_BASE_URL
+unset GVM_DL_INDEX_URL GVM_NO_VERIFY GVM_INDEX_TTL GVM_QUIET GVM_DEBUG
+
+RED="" GREEN="" BOLD="" RESET=""
+if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
+	RED=$'\033[0;31m'
+	GREEN=$'\033[0;32m'
+	BOLD=$'\033[1m'
+	RESET=$'\033[0m'
+fi
+
+if [ "$#" -gt 0 ]; then
+	files=()
+	for pattern in "$@"; do
+		while IFS= read -r match; do
+			files+=("$match")
+		done < <(find tests -maxdepth 1 -name "*${pattern}*_test.sh" | sort)
+	done
+else
+	mapfile -t files < <(find tests -maxdepth 1 -name '[0-9]*_test.sh' | sort)
+fi
+
+if [ "${#files[@]}" -eq 0 ]; then
+	echo "no test files matched" >&2
+	exit 1
+fi
+
+total_pass=0
+total_fail=0
+failed_files=()
+start=$SECONDS
+
+for file in "${files[@]}"; do
+	printf '%s==> %s%s\n' "$BOLD" "$file" "$RESET"
+	# A test that reads stdin must fail, not hang the whole suite.
+	out="$(bash "$file" < /dev/null 2>&1)"
+	status=$?
+	printf '%s\n' "$out" | sed 's/^/    /'
+	line="$(printf '%s\n' "$out" | grep -E '^[0-9]+ passed' | tail -1)"
+	pass="$(printf '%s' "$line" | sed -n 's/^\([0-9]*\) passed.*/\1/p')"
+	fail="$(printf '%s' "$line" | sed -n 's/.*, \([0-9]*\) failed.*/\1/p')"
+	total_pass=$((total_pass + ${pass:-0}))
+	total_fail=$((total_fail + ${fail:-0}))
+	if [ "$status" != "0" ]; then
+		failed_files+=("$file")
+	fi
+	printf '\n'
+done
+
+elapsed=$((SECONDS - start))
+printf '%s%s%s\n' "$BOLD" "----------------------------------------" "$RESET"
+if [ "${#failed_files[@]}" -eq 0 ]; then
+	printf '%s%d assertions passed, 0 failed%s in %ss across %d files\n' \
+		"$GREEN" "$total_pass" "$RESET" "$elapsed" "${#files[@]}"
+	exit 0
+fi
+
+printf '%s%d assertions passed, %d failed%s in %ss across %d files\n' \
+	"$RED" "$total_pass" "$total_fail" "$RESET" "$elapsed" "${#files[@]}"
+printf '%sfailed:%s\n' "$RED" "$RESET"
+for file in "${failed_files[@]}"; do
+	printf '  %s\n' "$file"
+done
+exit 1
