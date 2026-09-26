@@ -58,6 +58,14 @@ list, the installer and the test suite were replaced, not patched.
   before the version was selected - on every `gvm use`, and, because the user's
   shell is where that happens, on the way in. Same shape in `gvm pkgsetuse` and
   in `munge_path`'s PATH assembly. 23 expansions now carry a default.
+- The install test started its file server on port 0 and scraped the port out
+  of python's log line. That line is python's wording, not ours, and when the
+  test could not read it, it waited ten seconds and gave up on a server that was
+  running. It asks python for a free port and polls with `/dev/tcp` instead, and
+  prints the server's log if it still cannot start. The same test called
+  `sha256sum` directly to checksum its own fixture; macOS has `shasum` and no
+  `sha256sum`, and a pipeline through `cut` hid the failure, so the index went
+  out with an empty checksum. It uses gvm's own `gvm_checksum_file` now.
 - macOS puts `TMPDIR` under `/var`, which is a symlink to `/private/var`, and
   ends it with a slash. The test harness resolved neither, so a path built from
   `TMPDIR` and a path gvm reported for the same directory were spelled

@@ -16,8 +16,12 @@ assert_fail "" gvm_version_is_valid ""
 
 t "a release candidate sorts before its own final release"
 # `sort -V` gets this backwards: it orders go1.2.2 before go1.2.2rc1, so the
-# candidate looks newer than the release it was a candidate for.
-assert_eq "go1.2.2 go1.2.2rc1" "$(printf 'go1.2.2rc1\ngo1.2.2\n' | sort -V | tr '\n' ' ' | sed 's/ $//')"
+# candidate looks newer than the release it was a candidate for. GNU's sort is
+# only the reference point here - it is not installed everywhere, and macOS's
+# is BSD - so it is only compared where there is one to compare with.
+if printf 'go1.1\n' | sort -V > /dev/null 2>&1; then
+	assert_eq "go1.2.2 go1.2.2rc1" "$(printf 'go1.2.2rc1\ngo1.2.2\n' | sort -V | tr '\n' ' ' | sed 's/ $//')"
+fi
 assert_eq "go1.2.2rc1 go1.2.2" "$(printf 'go1.2.2rc1\ngo1.2.2\n' | gvm_versions_sorted | tr '\n' ' ' | sed 's/ $//')"
 
 t "sort -V is also wrong for 1.9 vs 1.10"

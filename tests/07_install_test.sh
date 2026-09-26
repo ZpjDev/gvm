@@ -42,7 +42,10 @@ start_mirror() {
 	mkdir -p "$MIRROR"
 	build_artifact
 	local sha size
-	sha="$(sha256sum "$MIRROR/$TARBALL" | cut -d' ' -f1)"
+	# gvm's own gvm_checksum_file, not sha256sum: macOS has shasum and no
+	# sha256sum, and a pipeline through cut hides the failure, so the index
+	# ended up with an empty checksum and every install against it failed.
+	sha="$(gvm_checksum_file "$MIRROR/$TARBALL")"
 	size="$(wc -c < "$MIRROR/$TARBALL" | tr -d ' ')"
 	SHA="$sha"
 	SIZE="$size"
@@ -50,17 +53,33 @@ start_mirror() {
 F	$FAKE_NAME	$TARBALL	$OS	$ARCH	archive	$SIZE	$sha
 V	$FAKE_NAME	stable
 TSV
-	(cd "$MIRROR" && exec python3 -u -m http.server 0 --bind 127.0.0.1) \
+	# Ask python which port is free and pass it in, rather than starting on
+	# port 0 and scraping the number out of the log line: the wording of that
+	# line is python's, not ours, and when it changed the test sat there for
+	# ten seconds and gave up on a server that was running fine.
+	PORT="$(python3 -c 'import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()')"
+	(cd "$MIRROR" && exec python3 -u -m http.server "$PORT" --bind 127.0.0.1) \
 		> "$GVM_TEST_TMP/mirror.log" 2>&1 &
 	MIRROR_PID=$!
+	# Poll by connecting, not by reading the log. /dev/tcp is in bash itself,
+	# so this needs nothing the runner might not have.
 	local tries=0
 	while [ "$tries" -lt 100 ]; do
-		PORT="$(sed -n 's/.*port \([0-9]*\).*/\1/p' "$GVM_TEST_TMP/mirror.log" | head -1)"
-		[ -n "$PORT" ] && break
+		if (exec 3<>/dev/tcp/127.0.0.1/"$PORT") 2> /dev/null; then
+			break
+		fi
 		tries=$((tries + 1))
 		sleep 0.1
 	done
-	[ -n "$PORT" ] || { echo "mirror did not start" >&2; exit 1; }
+	if [ "$tries" -ge 100 ]; then
+		echo "mirror did not start on port $PORT; its log said:" >&2
+		cat "$GVM_TEST_TMP/mirror.log" >&2
+		exit 1
+	fi
 	export GVM_DL_BASE_URL="http://127.0.0.1:$PORT"
 }
 
