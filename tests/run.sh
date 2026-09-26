@@ -36,7 +36,11 @@ if [ "$#" -gt 0 ]; then
 		done < <(find tests -maxdepth 1 -name "*${pattern}*_test.sh" | sort)
 	done
 else
-	mapfile -t files < <(find tests -maxdepth 1 -name '[0-9]*_test.sh' | sort)
+	# A while-read loop, not `mapfile`: macOS ships bash 3.2, and this runner
+	# has to work there for the sake of the 3.2 claim in the README.
+	while IFS= read -r match; do
+		files+=("$match")
+	done < <(find tests -maxdepth 1 -name '[0-9]*_test.sh' | sort)
 fi
 
 if [ "${#files[@]}" -eq 0 ]; then

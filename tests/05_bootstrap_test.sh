@@ -81,7 +81,11 @@ assert_eq "$GVM_ROOT/gos/go1.27.1" \
 		gvm_bootstrap_resolve go1.26.8)"
 
 t "an explicit GOROOT_BOOTSTRAP that is not a Go tree is rejected"
-assert_fails_with "cannot build" with_bootstrap /usr go1.26.8
+# Not /usr: a CI runner has a real Go there, and the point of the assertion is
+# a directory that cannot be a toolchain.
+not_a_toolchain="$GVM_TEST_TMP/not-a-toolchain"
+mkdir -p "$not_a_toolchain"
+assert_fails_with "cannot build" with_bootstrap "$not_a_toolchain" go1.26.8
 
 t "gvm_go_version_of reads VERSION"
 assert_eq go1.27.1 "$(gvm_go_version_of "$GVM_ROOT/gos/go1.27.1")"

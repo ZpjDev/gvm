@@ -43,6 +43,13 @@ list, the installer and the test suite were replaced, not patched.
   repairs `environments/default` when it pointed at what was removed, and drops
   aliases that pointed there.
 
+- A package set created by `gvm pkgset create` writes an environment file that
+  expanded `$GOPATH` and `$LD_LIBRARY_PATH` unguarded. Any shell running with
+  `set -u` - which is what the test suite does, and what plenty of CI does -
+  exited the moment that file was sourced, taking the calling shell with it and
+  printing nothing, because `cd`'s hook discards the output. They are `${VAR:-}`
+  now. The GitHub Actions job found this one, on its first run.
+
 ### Commands
 
 - New: `gvm doctor`, `gvm ls-remote`, `gvm applymod`, `gvm which`, `gvm delete`.
