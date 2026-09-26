@@ -10,7 +10,7 @@ trap gvm_test_sandbox_teardown EXIT
 
 json="$(mktemp "${TMPDIR:-/tmp}/gvm-index.XXXXXX")"
 tsv="$(mktemp "${TMPDIR:-/tmp}/gvm-index.XXXXXX")"
-trap 'rm -f "$json" "$tsv"' EXIT
+gvm_test_cleanup_add 'rm -f "$json" "$tsv"'
 
 # Deliberately compact: the parser follows brace depth, not indentation.
 cat > "$json" <<'JSON'

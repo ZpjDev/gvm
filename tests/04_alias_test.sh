@@ -5,7 +5,7 @@ gvm_test_sandbox go1.24.13 go1.27.1
 trap gvm_test_sandbox_teardown EXIT
 
 tsv="$(mktemp "${TMPDIR:-/tmp}/gvm-index.XXXXXX")"
-trap 'rm -f "$tsv"' EXIT
+gvm_test_cleanup_add 'rm -f "$tsv"'
 cat > "$tsv" <<'TSV'
 V	go1.24.13	stable
 V	go1.27.1	stable

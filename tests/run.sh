@@ -13,6 +13,13 @@ set -u
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
+# For the rules about TMPDIR, which both this runner and every test file need to
+# agree on: one place, so a runner cannot end up writing somewhere the tests are
+# not looking. Sourced before anything else here on purpose - it only defines
+# functions and sets variables.
+# shellcheck disable=SC1091
+. tests/lib.sh
+
 # The suite must never be able to reach the GVM installation of whoever is
 # running it. Inheriting GVM_ROOT, GOROOT or a `gvm` on PATH is exactly how the
 # old suite ended up testing the wrong thing.
@@ -59,7 +66,10 @@ for file in "${files[@]}"; do
 	# nothing at all until the file finishes, so a test file that hangs - or takes
 	# ten minutes to fail - shows up as silence with no clue where it stopped.
 	# A test that reads stdin must fail, not hang the whole suite.
-	log="$(mktemp "${TMPDIR:-/tmp}/gvm-test-log.XXXXXX")"
+	log="$(mktemp "$GVM_TEST_TMPBASE/gvm-test-log.XXXXXX")" || {
+		printf 'could not write a log file in %s\n' "$GVM_TEST_TMPBASE" >&2
+		exit 1
+	}
 	# A per-file timeout, so one file that hangs costs a minute and reports which
 	# test it was on. `timeout` is GNU; macOS has none unless coreutils is
 	# installed, where it is called gtimeout.
@@ -83,6 +93,14 @@ for file in "${files[@]}"; do
 	total_pass=$((total_pass + ${pass:-0}))
 	total_fail=$((total_fail + ${fail:-0}))
 	if [ "$status" != "0" ]; then
+		failed_files+=("$file")
+	elif [ -z "$line" ]; then
+		# A file that printed no result line has not reported a result, and
+		# scoring that as zero passes is how a broken harness hides a working
+		# suite: this runner once reported 0 assertions across every file and
+		# exited 0, because its own log file could not be created and every
+		# count came back empty.
+		printf '    no result line - treating this file as failed\n'
 		failed_files+=("$file")
 	fi
 	printf '\n'

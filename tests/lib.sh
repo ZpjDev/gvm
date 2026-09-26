@@ -21,6 +21,24 @@ export LC_ALL=C
 GVM_SOURCE_ROOT="${GVM_SOURCE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 export GVM_SOURCE_ROOT
 
+# Every sandbox this process has built, one path per line, and the cleanup a
+# test file has registered. A file that builds more than one sandbox - implode
+# destroys GVM_ROOT, so it needs one per case - used to leave all but the last
+# behind, and a file that wanted to clean up after itself had only one EXIT trap
+# to spend, which is the harness's. Six files were leaving a throwaway GVM_ROOT
+# on every run because of the two together.
+GVM_TEST_SANDBOXES=""
+GVM_TEST_CLEANUP=""
+
+# gvm_test_cleanup_add <command>
+# Run by the harness's own EXIT trap, after the test file is finished. This is
+# how a file tidies up: not with `trap ... EXIT`, which replaces the trap that
+# removes the sandbox and the profile snapshot.
+gvm_test_cleanup_add() {
+	GVM_TEST_CLEANUP="${GVM_TEST_CLEANUP}${1}
+"
+}
+
 GVM_TEST_PASS=0
 GVM_TEST_FAIL=0
 GVM_TEST_NAME=""
@@ -333,6 +351,8 @@ ENVEOF
 	unset GOROOT GOPATH GOBIN GOOS GOARCH GVM_VERSION gvm_go_name gvm_pkgset_name
 	mkdir -p "$root/tmp"
 	GVM_TEST_SANDBOX="$root"
+	GVM_TEST_SANDBOXES="${GVM_TEST_SANDBOXES}${root}
+"
 	GVM_TEST_TMP="$root/tmp"
 	# The sandbox's own bin/ goes first, so a `gvm` left over from a real
 	# installation on the developer's PATH can never be the one under test.
@@ -388,7 +408,19 @@ done
 # something gvm reported has both ends spelled the same way - which is what
 # macOS needs, where $TMPDIR is under /var and /var is a symlink to
 # /private/var. Everything derived from this is physical from here on.
-GVM_TEST_TMPBASE="$(cd "$GVM_TEST_TMPBASE" && pwd -P)"
+#
+# A TMPDIR that is not a directory - a stale value from a previous login, or a
+# name somebody made up to reproduce the trailing-slash case - is created if it
+# can be. It cannot simply be ignored: mktemp then fails, the sandbox is never
+# built, GVM_TEST_TMP keeps its default of /tmp, and the suite writes its
+# throwaway trees into the real one while reporting a shape it never tested.
+if ! mkdir -p "$GVM_TEST_TMPBASE" 2> /dev/null ||
+	! GVM_TEST_TMPBASE="$(cd "$GVM_TEST_TMPBASE" 2> /dev/null && pwd -P)" ||
+	[ -z "$GVM_TEST_TMPBASE" ]; then
+	printf 'gvm tests: TMPDIR "%s" is not a directory this suite can use.\n' \
+		"${TMPDIR:-/tmp}" >&2
+	exit 1
+fi
 
 gvm_test_sandbox_teardown() {
 	local status=0
@@ -396,6 +428,19 @@ gvm_test_sandbox_teardown() {
 	# that edited the developer's ~/.bashrc would still report success. exit
 	# does, and run.sh treats a non-zero status as a failure.
 	gvm_test_profiles_unchanged || status=1
+	if [ -n "$GVM_TEST_CLEANUP" ]; then
+		eval "$GVM_TEST_CLEANUP" 2> /dev/null
+		GVM_TEST_CLEANUP=""
+	fi
+	# Newline-separated and read with IFS= rather than split on spaces: TMPDIR
+	# containing a space is one of the shapes this suite is here to cover.
+	if [ -n "$GVM_TEST_SANDBOXES" ]; then
+		while IFS= read -r sandbox; do
+			[ -n "$sandbox" ] && rm -rf "$sandbox"
+		done <<SANDBOXES
+$GVM_TEST_SANDBOXES
+SANDBOXES
+	fi
 	[ -n "${GVM_TEST_SANDBOX:-}" ] && rm -rf "$GVM_TEST_SANDBOX"
 	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && rm -rf "$GVM_TEST_PROFILE_SNAPSHOT"
 	[ "$status" = 0 ] && return 0

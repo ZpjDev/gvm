@@ -50,7 +50,7 @@ assert_eq "$os-$arch" "$(gvm_platform_tarball)"
 
 t "gvm_index_has_binary knows which releases have prebuilt binaries"
 tsv="$(mktemp "${TMPDIR:-/tmp}/gvm-index.XXXXXX")"
-trap 'rm -f "$tsv"' EXIT
+gvm_test_cleanup_add 'rm -f "$tsv"'
 cat > "$tsv" <<'TSV'
 F	go1.4.3	go1.4.3.linux-amd64.tar.gz	linux	amd64	archive	1	a
 V	go1.4.3	stable

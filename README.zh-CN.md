@@ -316,7 +316,7 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
   `gvm ls-remote`（官方发布了什么）、`gvm applymod`（按 `go.mod` 切到满足它的版本，
   把它当成最低要求）、`gvm which`、`gvm delete`，以及重写的 `gvm diff` 和
   `gvm help`。
-- **测试套件**是 784 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
+- **测试套件**是 785 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
   `GVM_ROOT`；如果测试改到了你真实的 `~/.bashrc` 或 `~/.zshrc`，它会直接失败。
   `gvm update` 是拿真实的仓库测的，仓库是用真实的 gvm 树搭出来的，「远端」就是
   一个目录，所以测试不需要联网。GitHub Actions 在 Linux 和 macOS 上都跑，macOS

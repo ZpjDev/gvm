@@ -56,7 +56,7 @@ Only one thing changed: gvm can update itself.
 
 ### Tests
 
-784 assertions in 17 files, up from 664 in 16. The new file builds real
+785 assertions in 17 files, up from 664 in 16. The new file builds real
 repositories out of the real gvm tree and runs real `git` against them, with the
 "remote" being a directory, so `gvm update` is tested without a network.
 

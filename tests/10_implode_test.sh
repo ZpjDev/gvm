@@ -35,7 +35,7 @@ fake_home="$(mktemp -d "${TMPDIR:-/tmp}/gvm-home.XXXXXX")"
 printf 'export PATH=/usr/bin\nexport EDITOR=vi\n' > "$fake_home/.bashrc"
 printf '# zshrc\n' > "$fake_home/.zshrc"
 export HOME="$fake_home"
-trap 'rm -rf "$fake_home"; gvm_test_sandbox_teardown' EXIT
+gvm_test_cleanup_add 'rm -rf "$fake_home"'
 
 t "implode refuses $HOME outright"
 capture out env GVM_ROOT="$HOME" gvm implode --force

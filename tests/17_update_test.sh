@@ -284,10 +284,21 @@ git init -q "$stale_src"
 git -C "$stale_src" add -A && git -C "$stale_src" commit -qm "gvm 1.1.0" > /dev/null
 GVM_REPO="$stale_src" bash "$installer" --prefix "$stale" --no-profile > /dev/null 2>&1
 # The upgrade somebody performs: the current tree copied over that install.
-"$GVM_SOURCE_ROOT/install.sh" --prefix "$stale" --no-profile --no-clone --force > /dev/null 2>&1
+# Run it out of a repository of the test's own, because whether the tree gvm is
+# developed in happens to be a git checkout is not something this test should
+# depend on - and it decides whether a commit gets recorded at all.
+reinstall_src="$work/reinstall-src"
+rm -rf "$reinstall_src"
+copy_gvm_tree "$reinstall_src"
+git init -q "$reinstall_src"
+git -C "$reinstall_src" add -A
+git -C "$reinstall_src" commit -qm "gvm $(cat "$GVM_SOURCE_ROOT/VERSION")" > /dev/null
+reinstalled_at="$(git -C "$reinstall_src" rev-parse --short HEAD)"
+"$reinstall_src/install.sh" --prefix "$stale" --no-profile --no-clone --force > /dev/null 2>&1
 assert_eq "yes" "$(exists "$stale/git.bak")" "the old history is still set aside"
 assert_eq "$(cat "$GVM_SOURCE_ROOT/VERSION")" "$(cat "$stale/VERSION")" "the files are the new ones"
 # A commit was recorded by the reinstall, so the remedy can name it.
+assert_eq "$reinstalled_at" "$(sed -n 's/^commit=//p' "$stale/.gvm-source")" "the reinstall recorded its commit"
 assert_refused "local changes" in_root "$stale" update
 assert_contains "$out" "not update anything" "the checkout -- . trap is called out"
 assert_contains "$out" "reset --hard" "pointed at the recorded commit"
