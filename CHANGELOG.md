@@ -58,6 +58,10 @@ list, the installer and the test suite were replaced, not patched.
   before the version was selected - on every `gvm use`, and, because the user's
   shell is where that happens, on the way in. Same shape in `gvm pkgsetuse` and
   in `munge_path`'s PATH assembly. 23 expansions now carry a default.
+- The four `display_*` helpers assume they were given a message, so a caller
+  that passes an empty list kills the shell instead of reporting the problem -
+  on bash 3.2 under `set -u`, which is the shell the message was for. They
+  print what they were given, which may be nothing.
 - The zsh test's "no zsh installed" branch called a function that does not
   exist, so skipping the test failed the file that skipped it.
 - The `cd` override kept the user's own `cd` by lifting its body out of

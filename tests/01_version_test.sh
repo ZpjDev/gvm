@@ -92,7 +92,7 @@ assert_eq go1.10.1 "$(gvm_versions_installed | gvm_versions_latest 'go1.10*')"
 t "sorting is stable under repeated nested use (mktemp, not \$\$)"
 out="$(for i in 1 2 3 4 5; do
 	(printf 'go1.2.2\ngo1.24.13\ngo1.9.7\n' | gvm_versions_sorted | tr '\n' ' ')
-done | sort -u | wc -l)"
+done | sort -u | wc -l | tr -d ' ')"
 assert_eq 1 "$out"
 
 summary

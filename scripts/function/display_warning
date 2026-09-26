@@ -10,9 +10,9 @@ display_warning() {
 	local color
 	color="$(gvm_display_color yellow)"
 	if [ -n "$color" ]; then
-		printf '%s%sWARNING: %s%s\n' "$color" "$(gvm_display_color reset)" "$1" "$(gvm_display_color reset)"
+		printf '%s%sWARNING: %s%s\n' "$color" "$(gvm_display_color reset)" "${1:-}" "$(gvm_display_color reset)"
 	else
-		printf 'WARNING: %s\n' "$1"
+		printf 'WARNING: %s\n' "${1:-}"
 	fi
 	return 0
 }

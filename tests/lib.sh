@@ -246,7 +246,7 @@ gvm_test_watch_real_profiles() {
 	# after pointing HOME somewhere else must keep watching the developer's real
 	# home, which is the whole point.
 	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && return 0
-	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/gvm-home.XXXXXX")"
+	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}"/gvm-home.XXXXXX)"
 	: > "$GVM_TEST_PROFILE_SNAPSHOT/manifest"
 	local f n=0
 	for f in .bashrc .zshrc .profile .bash_profile .zprofile .zshenv; do
@@ -283,7 +283,10 @@ gvm_test_profiles_unchanged() {
 gvm_test_sandbox() {
 	local root
 	gvm_test_watch_real_profiles
-	root="$(mktemp -d "${TMPDIR:-/tmp}/gvm-test.XXXXXX")"
+	# Strip the trailing slash first: macOS sets TMPDIR to .../T/ with one, and
+# "${TMPDIR}/gvm-test.XXXXXX" then has a // in it that shows up in every
+# expected path in the suite.
+root="$(mktemp -d "${TMPDIR:-/tmp}"/gvm-test.XXXXXX)"
 	ln -s "$GVM_SOURCE_ROOT/scripts" "$root/scripts"
 	ln -s "$GVM_SOURCE_ROOT/bin" "$root/bin"
 	mkdir -p "$root/logs" "$root/gos" "$root/archive/package" \

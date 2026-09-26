@@ -249,7 +249,10 @@ printf 'module example.com/m\n' > "$nomod/go.mod"
 out="$(applymod_in "$nomod")"
 assert_contains "$out" "no 'go' directive"
 
-t "applymod is not a script full of return $(display_error)"
+# Without the parentheses: $(display_error) called the function with no
+# arguments at all, and a bare $1 is an unbound variable under `set -u` on
+# bash 3.2, so building this test's own name killed the file on macOS.
+t "applymod is not a script full of return plus a message"
 # `return $(display_error ...)` returns a message, not a status. It is the old
 # signature of a script that had never been run.
 # Comments quote the old bug to explain it, so look at code only.
