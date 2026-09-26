@@ -192,6 +192,27 @@ if [ -n "$dirty" ]; then
 	display_error "gvm's own files in $GVM_ROOT have local changes:"
 	printf '%s\n' "$dirty" | sed 's/^/  /'
 	display_message ""
+	if ! gvm_source_is_checkout; then
+		# The likeliest way to land here, and a trap. install.sh copies one
+		# version's files over whatever history the directory had, so a tree
+		# installed over an older clone never matches the commit it was cloned
+		# at - and "git checkout -- ." then looks like the fix while putting the
+		# older code back. Saying so is the difference between a user reading
+		# this and a user losing a working gvm to a suggestion in an error
+		# message.
+		display_message "This install is not recorded as a checkout, so its files do not match the"
+		display_message "commit it was installed over. That is what install.sh leaves behind when"
+		display_message "it copies one version over the history of another."
+		display_message ""
+		display_message "'git checkout -- .' below would put that older code back, not update anything."
+		if [ -n "$(gvm_source_field commit 2> /dev/null)" ]; then
+			display_message "  Put the installed version back under git:  git -C \"$GVM_ROOT\" reset --hard <the recorded commit>"
+			display_message "  gvm doctor prints it."
+		else
+			display_message "  Reinstall to get an install that matches its history:  install.sh --keep-repo"
+		fi
+		display_message ""
+	fi
 	display_message "gvm update does not merge, and it will not throw your changes away."
 	display_message "  Keep them:  git -C \"$GVM_ROOT\" stash"
 	display_message "  Lose them:  git -C \"$GVM_ROOT\" checkout -- ."

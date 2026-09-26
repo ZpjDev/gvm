@@ -270,6 +270,37 @@ assert_eq "yes" "$(exists "$clone_root/git.bak")" "the history is kept as git.ba
 assert_eq "no" "$(sed -n 's/^checkout=//p' "$clone_root/.gvm-source" 2> /dev/null)" "recorded as not a checkout"
 assert_contains "$(cat "$clone_root/.gvm-source" 2> /dev/null)" "repo=$keep_root"
 
+t "an install whose files outrun its history is told to reinstall, not to update"
+# The shape an upgrade actually takes on a machine installed by the one-liner:
+# install.sh copied this version's files over a directory still holding the
+# history of an older clone, so the tree can never fast-forward. Offering
+# 'git checkout -- .' here as the fix would put the old code back.
+stale="$work/stale"
+stale_src="$work/stale-src"
+rm -rf "$stale" "$stale_src"
+copy_gvm_tree "$stale_src"
+echo "1.1.0" > "$stale_src/VERSION"
+git init -q "$stale_src"
+git -C "$stale_src" add -A && git -C "$stale_src" commit -qm "gvm 1.1.0" > /dev/null
+GVM_REPO="$stale_src" bash "$installer" --prefix "$stale" --no-profile > /dev/null 2>&1
+# The upgrade somebody performs: the current tree copied over that install.
+"$GVM_SOURCE_ROOT/install.sh" --prefix "$stale" --no-profile --no-clone --force > /dev/null 2>&1
+assert_eq "yes" "$(exists "$stale/git.bak")" "the old history is still set aside"
+assert_eq "$(cat "$GVM_SOURCE_ROOT/VERSION")" "$(cat "$stale/VERSION")" "the files are the new ones"
+# A commit was recorded by the reinstall, so the remedy can name it.
+assert_refused "local changes" in_root "$stale" update
+assert_contains "$out" "not update anything" "the checkout -- . trap is called out"
+assert_contains "$out" "reset --hard" "pointed at the recorded commit"
+assert_contains "$out" "gvm doctor prints it"
+assert_eq "1.1.0" "$(cat "$stale_src/VERSION")" "nothing was written to the repository"
+
+# Without a recorded commit there is nothing to reset to, so the only advice
+# that works is reinstalling.
+rm -f "$stale/.gvm-source"
+assert_refused "local changes" in_root "$stale" update
+assert_contains "$out" "install.sh --keep-repo" "pointed at a reinstall"
+assert_not_contains "$out" "reset --hard" "nothing to reset to is not offered"
+
 t "gvm update puts a git.bak install back under git and updates it"
 # A new commit in the repository the clone came from.
 printf '\n# a new commit\n' >> "$keep_root/scripts/function/tools"
@@ -375,6 +406,15 @@ assert_eq "yes" "$(sed -n 's/^checkout=//p' "$keep2/.gvm-source" 2> /dev/null)" 
 assert_eq "yes" "$(exists "$keep2/.git")" ".git survived the reinstall"
 assert_eq "yes" "$(sed -n 's/^checkout=//p' "$keep2/.gvm-source" 2> /dev/null)" "still a checkout"
 assert_contains "$(in_root "$keep2" update 2>&1)" "Already up to date"
+
+# The same local edit in an install that *is* a checkout: refused for the same
+# reason, but not told to reinstall - it already matches its history.
+printf '\n# a hand patch\n' >> "$keep2/scripts/function/tools"
+capture out in_root "$keep2" update
+assert_ne 0 "$CAPTURE_STATUS"
+assert_contains "$out" "scripts/function/tools"
+assert_not_contains "$out" "--keep-repo" "not told to reinstall what is already right"
+git -C "$keep2" checkout -- scripts/function/tools
 
 # --- the shell warning --------------------------------------------------------
 

@@ -19,6 +19,10 @@ Only one thing changed: gvm can update itself.
   gvm's own files, or with a merge or rebase somebody interrupted is refused
   with the command that fixes it. An update that resolves a conflict by gvm's
   opinion about somebody's work is worse than no update.
+- An install whose files do not match the commit they were installed over - what
+  `install.sh` leaves behind when it copies one version over the history of
+  another - is refused with the repair that works, and is told that
+  `git checkout -- .` is not it: that would put the older code back.
 - The installer already kept the history, as `git.bak`, so that most installs
   need no migration: the first `gvm update` moves it back to `.git` and updates
   from there. Installing with `install.sh --keep-repo` skips that step, and a
@@ -52,7 +56,7 @@ Only one thing changed: gvm can update itself.
 
 ### Tests
 
-769 assertions in 17 files, up from 664 in 16. The new file builds real
+784 assertions in 17 files, up from 664 in 16. The new file builds real
 repositories out of the real gvm tree and runs real `git` against them, with the
 "remote" being a directory, so `gvm update` is tested without a network.
 
