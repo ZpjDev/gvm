@@ -32,6 +32,9 @@ jobs:
       - name: Run the test suite
         # The suite is plain bash and needs no network: it pins the release
         # index to a fixture and fakes every download.
+        # A per-step timeout, so a hang costs minutes and not the six hours a
+        # job gets by default - and so the log ends at the test file that hung.
+        timeout-minutes: 8
         run: make test
 
       - name: Install into a throwaway prefix, as a user would
