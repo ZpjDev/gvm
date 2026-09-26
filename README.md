@@ -311,6 +311,27 @@ Each test file is standalone, needs no framework, and builds its own `GVM_ROOT`
 under `/tmp`, so the suite never touches a real installation. Tests that need
 the release index pin it to a fixture.
 
+macOS is where gvm is most likely to be used, and its `bash` is 3.2, so the
+suite is worth running there even from Linux. A container is enough:
+
+```console
+$ docker build -t gvm-bash32 - <<'EOF'
+FROM bash:3.2
+RUN apk add --no-cache coreutils findutils grep gawk sed procps git python3 go curl make
+RUN ln -sf /usr/local/bin/bash /usr/bin/bash && ln -sf /usr/local/bin/bash /bin/bash
+EOF
+$ docker run --rm -v "$PWD:/w" -w /w -e HOME=/tmp gvm-bash32 bash tests/run.sh
+```
+
+Two more conditions worth reproducing on purpose, because they have each broken
+a test that passed everywhere else - neither needs macOS:
+
+```console
+$ TMPDIR=/tmp/whatever/ bash tests/run.sh       # macOS sets TMPDIR with a slash
+$ ln -s /tmp /tmp/varlink
+$ TMPDIR=/tmp/varlink/ bash tests/run.sh        # ... and under /var -> /private/var
+```
+
 The layout is flat on purpose: `bin/gvm` dispatches by file name, so a command
 is `scripts/<name>` and a shell function is `scripts/env/<name>`. `make lint`
 and the help-consistency test in `tests/09_cli_test.sh` both fail if the three

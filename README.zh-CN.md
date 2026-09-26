@@ -291,6 +291,27 @@ $ ./tests/run.sh     # 同上
 `GVM_ROOT`，所以测试永远不会碰到你真实的安装。需要发布索引的测试会把它固定
 到一份 fixture。
 
+macOS 是最可能用到 gvm 的地方，而它的 `bash` 是 3.2，所以即使在 Linux 上也值得
+在那个版本里跑一遍套件。一个容器就够了：
+
+```console
+$ docker build -t gvm-bash32 - <<'EOF'
+FROM bash:3.2
+RUN apk add --no-cache coreutils findutils grep gawk sed procps git python3 go curl make
+RUN ln -sf /usr/local/bin/bash /usr/bin/bash && ln -sf /usr/local/bin/bash /bin/bash
+EOF
+$ docker run --rm -v "$PWD:/w" -w /w -e HOME=/tmp gvm-bash32 bash tests/run.sh
+```
+
+还有两个条件值得故意去复现，因为它们各自弄坏过一个在别处全都通过的测试，而且
+都不需要 macOS：
+
+```console
+$ TMPDIR=/tmp/whatever/ bash tests/run.sh       # macOS 的 TMPDIR 带结尾斜杠
+$ ln -s /tmp /tmp/varlink
+$ TMPDIR=/tmp/varlink/ bash tests/run.sh        # ... 而且位于 /var -> /private/var 之下
+```
+
 目录结构刻意做得很平：`bin/gvm` 按文件名分发，所以一个命令就是
 `scripts/<名字>`，一个 shell 函数就是 `scripts/env/<名字>`。`make lint` 和
 `tests/09_cli_test.sh` 里的帮助一致性测试都会在「文件列表、帮助文本、对外宣称
