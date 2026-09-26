@@ -66,8 +66,14 @@ else
 fi
 
 if [ -d "$GVM_ROOT/.git" ]; then
-	warn "a live .git directory is present in GVM_ROOT"
-	info "gvm will refuse to run. Remove it, or reinstall with binscripts/gvm-installer."
+	if gvm_source_is_checkout; then
+		ok "this install is a git checkout, so 'gvm update' can update it"
+		info "State directories are .gitignore'd; 'git clean -x' in $GVM_ROOT would still delete them."
+	else
+		warn "a .git directory is present in GVM_ROOT that this install did not put there"
+		info "gvm warns once per shell about it, and 'git clean' here would delete gvm's state."
+		info "Reinstall with install.sh, or set GVM_NO_GIT_BAK=1 to silence the warning."
+	fi
 fi
 
 section "Required tools"
@@ -139,6 +145,34 @@ if gvm_index_refresh > /dev/null 2>&1; then
 else
 	warn "the release index could not be refreshed"
 	info "Commands that need it will fail until the network is reachable."
+fi
+
+section "Where this gvm came from"
+# The question every bug report starts with, and the one an install cannot
+# answer by looking at its own files.
+if recorded_repo="$(gvm_source_field repo 2> /dev/null)" && [ -n "$recorded_repo" ]; then
+	ok "installed from $recorded_repo"
+else
+	info "this install records no repository"
+fi
+if recorded_commit="$(gvm_source_field commit 2> /dev/null)" && [ -n "$recorded_commit" ]; then
+	recorded_ref="$(gvm_source_field ref 2> /dev/null || true)"
+	recorded_at="$(gvm_source_field installed 2> /dev/null || true)"
+	info "commit ${recorded_commit:0:7}${recorded_ref:+ on $recorded_ref}${recorded_at:+, installed $recorded_at}"
+fi
+
+if [ -e "$GVM_ROOT/.git" ] || [ -d "$GVM_ROOT/git.bak" ]; then
+	if [ -e "$GVM_ROOT/.git" ]; then
+		ok "'gvm update' is available"
+	else
+		ok "'gvm update' is available; it will restore git.bak first"
+	fi
+	[ -n "$(gvm_source_field repo 2> /dev/null)" ] ||
+		info "No repository recorded, so 'gvm update' needs --repo <url>."
+else
+	warn "'gvm update' is not available: this install kept no git history"
+	info "Install from a checkout to fix it:"
+	info "  bash <(curl -sSL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer) -- --keep-repo"
 fi
 
 section "Installed versions"

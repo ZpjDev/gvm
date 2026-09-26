@@ -68,6 +68,9 @@ do_uninstall=""
 no_clone=""
 keep_repo=""
 cloned=""
+# Set only when this run is the one that fetches. Referenced later to record
+# where the install came from, and `set -u` is on.
+repo=""
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -370,6 +373,12 @@ mkdir -p "$destination" || {
 	exit 1
 }
 
+# Everything the installer puts in a $GVM_ROOT, in one place. The staging copy
+# below, the real copy, and the dirty check in scripts/update all depend on this
+# list agreeing; scripts/update keeps its own copy of it and
+# tests/17_update_test.sh fails if the two drift apart.
+installed_items="bin scripts locales VERSION LICENSE AUTHORS README.md README.zh-CN.md"
+
 # Installing a checkout over itself -- running this script out of $prefix, which
 # is what --no-clone is for -- cannot copy a directory onto itself: cp either
 # refuses or, with the rm below, deletes the file before reading it. Stage the
@@ -380,7 +389,7 @@ if [ "$source_root" = "$destination" ]; then
 		exit 1
 	}
 	trap 'rm -rf "$staging"' EXIT
-	for item in bin scripts locales VERSION LICENSE AUTHORS README.md README.zh-CN.md; do
+	for item in $installed_items; do
 		[ -e "$source_root/$item" ] || continue
 		cp -R "$source_root/$item" "$staging/" || {
 			display_error "Could not stage $item from $source_root"
@@ -405,16 +414,22 @@ copy_into() {
 	installed=$((installed + 1))
 }
 
-for item in bin scripts locales; do
+for item in $installed_items; do
 	copy_into "$item" || exit 1
 done
-for file in VERSION LICENSE AUTHORS README.md README.zh-CN.md; do
-	copy_into "$file" || exit 1
-done
 
-# Keep the files executable that have to be run directly.
+# Keep the files that have to be run directly runnable. Only those: `chmod +x`
+# over the whole of scripts/ also marked every *sourced* file as modified, so a
+# checkout install came out of the installer dirty and `gvm update` - which
+# refuses to move a dirty checkout - could never update it.
 chmod +x "$destination/bin/gvm" 2> /dev/null
-find "$destination/scripts" -type f -exec chmod +x {} + 2> /dev/null
+for script in "$destination"/scripts/*; do
+	[ -f "$script" ] || continue
+	case "${script##*/}" in
+		functions | gvm | gvm-default) continue ;; # sourced, not run
+	esac
+	chmod +x "$script" 2> /dev/null
+done
 
 # Runtime directories. gvm-default creates these too, but a half-configured
 # install is much harder to debug than one that is already right.
@@ -456,9 +471,58 @@ fi
 # $GVM_ROOT means $GVM_ROOT is somebody's work tree, and every command then warns
 # about it (see scripts/env/gvm). It is renamed rather than deleted, so the
 # history is still there if someone wants it.
+#
+# Unless the previous install said it wanted a checkout: `gvm update` needs one,
+# and quietly turning a deliberate --keep-repo install back into a git.bak on
+# the next reinstall would take that away without anybody asking.
 if [ -n "$cloned" ] && [ -z "$keep_repo" ] && [ -d "$destination/.git" ]; then
-	mv "$destination/.git" "$destination/git.bak" 2> /dev/null &&
-		display_message "  kept the git history as $destination/git.bak"
+	if [ "$(sed -n 's/^checkout=//p' "$destination/.gvm-source" 2> /dev/null)" = "yes" ]; then
+		display_message "  keeping .git: this install was recorded as a checkout, which is what 'gvm update' uses"
+	else
+		mv "$destination/.git" "$destination/git.bak" 2> /dev/null &&
+			display_message "  kept the git history as $destination/git.bak"
+	fi
+fi
+
+# --- provenance --------------------------------------------------------------
+
+# Where this gvm came from, so `gvm update` knows what to fetch and `gvm doctor`
+# can answer "which gvm is this?". Five key=value lines, written with plain
+# printf because this script has to stand on its own; scripts/function/gvm_source
+# reads them, and tests/17_update_test.sh fails if the two ever disagree.
+write_source_file() {
+	local source_repo="${1:-}" source_ref="${2:-}" source_commit="${3:-}" source_version="${4:-}" source_checkout="${5:-no}"
+
+	{
+		printf '# Written by gvm. Records what was installed, and where from.\n'
+		printf 'repo=%s\n' "$source_repo"
+		printf 'ref=%s\n' "$source_ref"
+		printf 'commit=%s\n' "$source_commit"
+		printf 'version=%s\n' "$source_version"
+		printf 'checkout=%s\n' "$source_checkout"
+		printf 'installed=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2> /dev/null || echo unknown)"
+	} > "$destination/.gvm-source" 2> /dev/null ||
+		display_message "  note: could not record the install's origin in $destination/.gvm-source"
+}
+
+source_repo="$repo"
+if [ -z "$source_repo" ] && [ -d "$source_root/.git" ]; then
+	source_repo="$(git -C "$source_root" remote get-url origin 2> /dev/null)"
+fi
+source_commit=""
+source_ref=""
+if [ -d "$destination/.git" ]; then
+	source_commit="$(git -C "$destination" rev-parse --short HEAD 2> /dev/null)"
+	source_ref="$(git -C "$destination" symbolic-ref --short HEAD 2> /dev/null)"
+elif [ -d "$source_root/.git" ]; then
+	source_commit="$(git -C "$source_root" rev-parse --short HEAD 2> /dev/null)"
+	source_ref="$(git -C "$source_root" symbolic-ref --short HEAD 2> /dev/null)"
+fi
+
+if [ -d "$destination/.git" ]; then
+	write_source_file "$source_repo" "$source_ref" "$source_commit" "$(gvm_version_string)" yes
+else
+	write_source_file "$source_repo" "$source_ref" "$source_commit" "$(gvm_version_string)" no
 fi
 
 # --- profile -----------------------------------------------------------------

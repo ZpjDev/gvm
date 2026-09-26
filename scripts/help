@@ -40,6 +40,7 @@ cat <<EOF
     pkgenv                  Print or edit the environment of a pkgset.
 
   Managing
+    update                  Update gvm itself, from its git checkout.
     uninstall <version>     Remove an installed version.
     delete <version>        The same thing, under its other name.
     alias                   Manage version aliases.
@@ -76,6 +77,7 @@ cat <<EOF
     GVM_OFFLINE             Never refresh the release index.
     GVM_NO_VERIFY           Skip checksum verification (not recommended).
     GVM_QUIET               Say less. GVM_DEBUG traces the internals.
+    GVM_REPO                Repository to install and update gvm from, not the default.
 
     The boolean ones take 1/true/yes/on and 0/false/no/off, so
     GVM_NO_VERIFY=0 still verifies.

@@ -41,7 +41,7 @@ assert_contains "$out" "gvm which current nosuchthing"
 
 t "no command dies on an unset variable"
 for cmd in current which version ls ls-remote doctor help pkgenv diff pkgset \
-	completion uninstall implode list listall; do
+	completion uninstall implode list listall update; do
 	run "$cmd with nothing selected" gvm "$cmd"
 done
 
@@ -49,7 +49,7 @@ t "no command dies on an unset variable with a version selected"
 GVM_STRICT=1
 ( gvm use go1.24.13 > /dev/null 2>&1
 	for cmd in current which version ls ls-remote doctor help pkgenv diff \
-		completion uninstall list listall; do
+		completion uninstall list listall update; do
 		run "$cmd with go1.24.13 selected" gvm "$cmd"
 	done
 	exit $?

@@ -13,14 +13,21 @@ gvm() {
 		return 1
 	fi
 
-	# A .git here means this is somebody's work tree rather than an install, so
-	# gvm's own files are unversioned and a stray `git clean` in $GVM_ROOT would
-	# take them out. Warn once per shell rather than refusing every command: the
-	# fix is a reinstall, but nothing here is broken until they run git.
-	if [[ -z "${GVM_NO_GIT_BAK:-}" && -d "$GVM_ROOT/.git" && -z "${_gvm_warned_git:-}" ]]; then
-		display_warning "$GVM_ROOT is a git work tree, not just an install."
-		display_message "gvm keeps its own state here; 'git clean' in this directory would delete it."
-		display_message "Reinstall with install.sh to fix this, or set GVM_NO_GIT_BAK=1 to silence it."
+	# A .git here means $GVM_ROOT is a git work tree as well as an install, and
+	# gvm keeps state of its own here - gos/, pkgsets/, the release index cache -
+	# so a `git clean` in this directory would take it out. Warn once per shell
+	# rather than refusing every command: nothing is broken until somebody runs
+	# git, and a user who asked for a checkout with install.sh --keep-repo gets
+	# 'gvm update' out of it.
+	if [[ -z "${GVM_NO_GIT_BAK:-}" && -e "$GVM_ROOT/.git" && -z "${_gvm_warned_git:-}" ]]; then
+		if gvm_source_is_checkout; then
+			display_warning "$GVM_ROOT is a git checkout, so 'gvm update' can update it."
+			display_message "Its state directories are .gitignore'd, but 'git clean -x' here would still delete them."
+		else
+			display_warning "$GVM_ROOT is a git work tree, not just an install."
+			display_message "gvm keeps its own state here; 'git clean' in this directory would delete it."
+			display_message "Reinstall with install.sh to fix this, or set GVM_NO_GIT_BAK=1 to silence it."
+		fi
 		_gvm_warned_git=1
 	fi
 

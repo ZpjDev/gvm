@@ -16,6 +16,11 @@ tmp/
 logs/
 go
 
+# What the installer records about this install. Written by install.sh and by
+# `gvm update`; it is this installation's own metadata, not part of gvm.
+.gvm-source
+.gvm-source.tmp.*
+
 # Nothing in an installed gvm should be a build artefact.
 *.log
 *.tsv

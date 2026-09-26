@@ -53,6 +53,7 @@ directory that is not already a gvm, so `--force` is a deliberate word.
 | `--no-profile` | Do not touch any profile |
 | `--force` | Reinstall over an existing gvm |
 | `--no-clone` | Install from the checkout you are standing in |
+| `--keep-repo` | Keep the git checkout as `.git`, instead of renaming it to `git.bak` |
 | `--uninstall` | Remove gvm; keeps `$PREFIX/gos` with `--force` |
 
 The profile line is:
@@ -70,6 +71,46 @@ finds. Requirements: `bash` 3.2+ (or zsh 5+), `tar`, `gzip`, `awk`, `sed`, and a
 SHA256 utility
 (`sha256sum` or `shasum`). `curl` is needed to download, and `make` plus a C
 compiler only for source builds. `gvm doctor` checks all of it.
+
+## Updating gvm
+
+`gvm update` fetches from the repository your install came from and
+fast-forwards, the way `brew update` does:
+
+```console
+$ gvm update
+Fetching origin
+gvm 1.1.0 -> 1.2.0 (949184e..a1b2c3d)
+1 new commit(s):
+  a1b2c3d Release 1.2.0
+
+gvm is now at 1.2.0 (a1b2c3d).
+Start a new shell to pick it up:  exec $SHELL
+Go versions under /home/you/.gvm/gos were not touched.
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--check` | Report what an update would do, and change nothing |
+| `--repo <url>` | Fetch from somewhere else, without adding a remote |
+| `--ref <name>` | Fetch that branch or tag instead of the tracked one |
+
+It only ever fast-forwards. A checkout with local commits, with local edits to
+gvm's own files, or with a merge or rebase somebody interrupted is refused, and
+the error names the command that fixes it - `git -C ~/.gvm stash` for edits,
+`gvm update --repo <your fork>` for local commits. An update that resolved a
+conflict by gvm's opinion about your work would be worse than no update at all.
+
+`install.sh` has always kept the history it cloned, as `~/.gvm/git.bak`, so an
+install made by the one-liner is updatable without being reinstalled: the first
+`gvm update` moves it back to `.git` and updates from there. `install.sh
+--keep-repo` keeps the checkout in place instead, and a later reinstall leaves it
+alone. An install with no history at all - a tarball unpacked by hand - is told
+how to get a checkout rather than updated from a URL nothing has verified.
+
+`gvm update` does not touch the Go versions under `gos/`, your aliases or your
+package sets, and it does not switch the version you are using. It updates the
+files; the shell you are in picks them up when you start a new one.
 
 ## Using it
 
@@ -229,6 +270,9 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
   `GVM_ROOT` that does not have both `scripts/` and `VERSION`, and only prompts
   when there is a terminal, so a script gets an error instead of a hang.
 - `gvm uninstall` refuses to remove the version currently in use unless forced.
+- `gvm update` only fast-forwards, and refuses a dirty, diverged or
+  half-finished checkout instead of resolving it for you. A tool that overwrites
+  the files you edited to make it work is not an update.
 - `gvm install <version> --force` replaces the GOROOT and nothing else. Your
   package set survives, which matters because that is where the module cache and
   everything `go get` built live: reinstalling a version is how you recover from
@@ -257,7 +301,17 @@ it selects a version. Without that, a `go.mod` saying `go 1.30` would send the
 toolchain off to fetch Go 1.30 and quietly ignore the version you selected.
 Set `GOTOOLCHAIN` yourself if you would rather Go managed that.
 
-## What changed in 1.1.0
+`$GVM_ROOT/.gvm-source` records what the installer put there: repository, ref,
+commit, version, and whether the install is a git checkout. `gvm update` keeps
+it current and `gvm doctor` prints it, and it is the first thing worth pasting
+into a bug report. Only `gvm update` writes it and no `gvm ls` ever reads it, so
+a damaged file cannot break a command that has nothing to do with it.
+
+## What changed in 1.1.0 and 1.2.0
+
+1.2.0 added `gvm update` - see [Updating gvm](#updating-gvm) - and fixed the
+two things that got in its way. The rest of this section is 1.1.0, which is where
+the rewrite happened.
 
 1.0.22 is from 2016 and its release list is a file in the repository, so a
 `gvm install 1.24` could only find the patch releases that existed when the
@@ -281,14 +335,17 @@ interface:
   `--uninstall` honours `--no-profile`. Reinstalling a version with `--force`
   keeps its package set, so recovering from a broken Go tree does not cost you
   the module cache.
-- **New commands**: `gvm doctor` (what is wrong with this installation),
-  `gvm ls-remote` (what is published), `gvm applymod` (switch to whatever a
-  `go.mod` asks for, treating it as the minimum it is), `gvm which`, `gvm
-  delete`, and a rewritten `gvm diff` and `gvm help`.
-- **The test suite** is 664 assertions of plain bash with no framework, each
+- **New commands**: `gvm update` (update gvm itself from git), `gvm doctor`
+  (what is wrong with this installation), `gvm ls-remote` (what is published),
+  `gvm applymod` (switch to whatever a `go.mod` asks for, treating it as the
+  minimum it is), `gvm which`, `gvm delete`, and a rewritten `gvm diff` and
+  `gvm help`.
+- **The test suite** is 769 assertions of plain bash with no framework, each
   file building its own throwaway `GVM_ROOT`. It also fails if a test writes to
-  your real `~/.bashrc` or `~/.zshrc`. GitHub Actions runs it on Linux and on
-  macOS, whose `bash` is 3.2.
+  your real `~/.bashrc` or `~/.zshrc`. `gvm update` is tested against real
+  repositories built out of the real gvm tree, with the "remote" being a
+  directory, so the test needs no network. GitHub Actions runs it on Linux and
+  on macOS, whose `bash` is 3.2.
 - **A Chinese README** ([简体中文](./README.zh-CN.md)) and a proper `CHANGELOG`.
 
 Bugs fixed that are worth calling out, because they were silent: `gvm implode`

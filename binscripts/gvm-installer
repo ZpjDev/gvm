@@ -35,6 +35,7 @@ through:
   --no-profile      Do not touch any profile file
   --force           Install over an existing gvm
   --no-clone        Install from a gvm checkout you already have
+  --keep-repo       Keep the git checkout, so 'gvm update' can update gvm
   --uninstall       Remove an installed gvm
   -h, --help        Show install.sh's own help
 

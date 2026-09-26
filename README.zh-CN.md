@@ -51,6 +51,7 @@ $ make install PREFIX=~/go/gvm
 | `--no-profile` | 不动任何配置文件 |
 | `--force` | 覆盖已有的 gvm 重新安装 |
 | `--no-clone` | 直接用当前的 gvm 源码目录安装，不联网 |
+| `--keep-repo` | 保留 git checkout 原样，不改名成 `git.bak` |
 | `--uninstall` | 卸载 gvm；配合 `--force` 会保留 `$PREFIX/gos` |
 
 写进配置文件的那一行是：
@@ -67,6 +68,43 @@ bash 和 zsh 都能用；安装脚本会把那行写进它找到的那个 shell 
 `bash` 3.2+（或 zsh 5+）、`tar`、`gzip`、`awk`、`sed`，以及一个 SHA256 工具
 （`sha256sum` 或 `shasum`）。下载需要 `curl`；只有源码构建才需要 `make` 和 C
 编译器。`gvm doctor` 会把这些都检查一遍。
+
+## 更新 gvm 本身
+
+`gvm update` 会从这次安装的来源仓库 fetch 过来然后 fast-forward，就像
+`brew update` 那样：
+
+```console
+$ gvm update
+Fetching origin
+gvm 1.1.0 -> 1.2.0 (949184e..a1b2c3d)
+1 new commit(s):
+  a1b2c3d Release 1.2.0
+
+gvm is now at 1.2.0 (a1b2c3d).
+Start a new shell to pick it up:  exec $SHELL
+Go versions under /home/you/.gvm/gos were not touched.
+```
+
+| 参数 | 作用 |
+| --- | --- |
+| `--check` | 只报告会做什么，什么都不改 |
+| `--repo <url>` | 从别的仓库 fetch，不会添加 remote |
+| `--ref <name>` | fetch 指定的分支或 tag，而不是当前跟踪的那个 |
+
+它只做 fast-forward。带着本地提交、带着对 gvm 自身文件的本地修改、或者有被中断
+的 merge / rebase 的 checkout，一律拒绝，并且报错里直接给出该敲哪条命令——本地
+修改对应 `git -C ~/.gvm stash`，本地提交对应 `gvm update --repo <你的 fork>`。
+一个按 gvm 自己的判断去「解决」你的冲突的更新，比不更新更糟。
+
+`install.sh` 一直保留着它 clone 下来的历史，放在 `~/.gvm/git.bak`，所以用一行命令
+装的 gvm 不重装也能更新：第一次 `gvm update` 把它挪回 `.git`，然后从那里
+fast-forward。`install.sh --keep-repo` 则让它就留在原处，之后再重装也不会把它收
+走。完全没有历史的安装（比如手工解压的压缩包）不会被拿一个没验证过的 URL 去更新，
+而是告诉你怎么先弄一个 checkout。
+
+`gvm update` 不碰 `gos/` 下的 Go 版本、别名和 package set，也不会切换你正在用
+的版本。它只改文件；你当前这个 shell 要开新的才能用上。
 
 ## 使用
 
@@ -218,6 +256,9 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
   又没有 `VERSION` 的 `GVM_ROOT`，而且只在有终端的时候才提示确认，所以脚本里
   拿到的是报错，而不是一直挂着。
 - `gvm uninstall` 拒绝删除正在使用的版本，除非加 `--force`。
+- `gvm update` 只做 fast-forward，遇到脏的、分叉的或者停在半截的 checkout 会
+  拒绝，而不是替你和稀泥。一个会覆盖掉你为了让它跑起来而改过的文件的工具，
+  那不叫更新。
 - `gvm install <版本> --force` 只替换 GOROOT，别的不动。你的 package set 会保留，
   这一点很重要：模块缓存和 `go get` 装出来的东西都在里面。重装某个版本本来就是
   用来修坏掉的 Go 树的，不应该顺便把下载缓存也赔进去。
@@ -244,7 +285,15 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
 `go 1.30` 的 `go.mod` 会让工具链自己去抓一个 Go 1.30，然后你选的那个版本就被
 悄悄忽略了。如果你更想让 Go 自己管这件事，自行设置 `GOTOOLCHAIN` 即可。
 
-## 1.1.0 改了什么
+`$GVM_ROOT/.gvm-source` 记录安装脚本放进去的东西：仓库、ref、commit、版本，
+以及这次安装是不是一个 git checkout。`gvm update` 会更新它，`gvm doctor` 会打
+印它，报 bug 时它也是最该先贴出来的东西。只有 `gvm update` 会写它，`gvm ls`
+这类命令根本不读它，所以文件坏掉也不会连累跟它无关的命令。
+
+## 1.1.0 和 1.2.0 改了什么
+
+1.2.0 加了 `gvm update`（见[更新 gvm 本身](#更新-gvm-本身)），并修掉了挡在它
+前面的两件事。下面这些属于 1.1.0，也就是重写本身。
 
 1.0.22 是 2016 年的版本，发布列表是仓库里的一个文件。这次重写了其中
 已经老化的部分，命令行接口保持不变：
@@ -263,12 +312,15 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
   上来，正在使用中的 gvm 不会被删掉，`--uninstall` 也遵守 `--no-profile`。
   `gvm install X --force` 重装时会保留该版本的 package set——修坏掉的 Go 树不该
   连带赔上模块缓存。
-- **新命令**：`gvm doctor`（这台安装哪里不对）、`gvm ls-remote`（官方发布了什么）、
-  `gvm applymod`（按 `go.mod` 切到满足它的版本，把它当成最低要求）、`gvm which`、
-  `gvm delete`，以及重写的 `gvm diff` 和 `gvm help`。
-- **测试套件**是 664 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
+- **新命令**：`gvm update`（用 git 更新 gvm 自己）、`gvm doctor`（这台安装哪里不对）、
+  `gvm ls-remote`（官方发布了什么）、`gvm applymod`（按 `go.mod` 切到满足它的版本，
+  把它当成最低要求）、`gvm which`、`gvm delete`，以及重写的 `gvm diff` 和
+  `gvm help`。
+- **测试套件**是 769 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
   `GVM_ROOT`；如果测试改到了你真实的 `~/.bashrc` 或 `~/.zshrc`，它会直接失败。
-  GitHub Actions 在 Linux 和 macOS 上都跑，macOS 的 `bash` 是 3.2。
+  `gvm update` 是拿真实的仓库测的，仓库是用真实的 gvm 树搭出来的，「远端」就是
+  一个目录，所以测试不需要联网。GitHub Actions 在 Linux 和 macOS 上都跑，macOS
+  的 `bash` 是 3.2。
 - **中文文档**（就是本文件）和一份完整的 `CHANGELOG.md`。
 
 值得单独点出的几个静默 bug：`gvm implode` 会删掉作为 `$HOME` 的 `GVM_ROOT`；

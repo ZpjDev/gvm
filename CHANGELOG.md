@@ -4,6 +4,58 @@ Changes from 1.0.22 (2016), whose history is in this repository before that
 release. Nothing here changes the interface, only how it works and what it gets
 right.
 
+## 1.2.0 - 2026-09-27
+
+Only one thing changed: gvm can update itself.
+
+### `gvm update`
+
+- `gvm update` fetches from the repository the install came from and
+  fast-forwards, the way `brew update` does. `gvm update --check` reports what
+  it would do and changes nothing, `--repo <url>` fetches from somewhere else
+  without touching the checkout's remotes, and `--ref <name>` fetches that
+  branch or tag.
+- It only ever fast-forwards. An install with local commits, with local edits to
+  gvm's own files, or with a merge or rebase somebody interrupted is refused
+  with the command that fixes it. An update that resolves a conflict by gvm's
+  opinion about somebody's work is worse than no update.
+- The installer already kept the history, as `git.bak`, so that most installs
+  need no migration: the first `gvm update` moves it back to `.git` and updates
+  from there. Installing with `install.sh --keep-repo` skips that step, and a
+  later reinstall no longer takes the checkout away again.
+- An install with no history at all - a tarball unpacked by hand - is told how to
+  get a checkout rather than being updated from a URL nothing has verified.
+- Go versions under `$GVM_ROOT/gos`, aliases and package sets are not touched.
+
+### Provenance
+
+- `install.sh` records what it installed in `$GVM_ROOT/.gvm-source`: the
+  repository, the ref, the commit, the version, and whether the install is a
+  git checkout. `gvm update` updates it, `gvm doctor` reports it, and it is the
+  first thing to paste into a bug report. `gvm ls` and friends never read it, so
+  a damaged file cannot break a command that has nothing to do with it.
+- The shell warning about a `.git` in `GVM_ROOT` now says which kind it found:
+  a checkout you asked for, or a `.git` that appeared without anybody's
+  intention. `gvm doctor` no longer claims gvm refuses to run when a `.git` is
+  present, which it has not done since the warning became a warning.
+
+### Fixed
+
+- `install.sh` ran `chmod +x` over the whole of `scripts/`, including the files
+  that are only ever sourced. In a checkout install that marked 34 tracked files
+  as modified, which left the install permanently dirty - and a dirty checkout is
+  exactly what `gvm update` refuses to move. Only the files that are run are
+  marked executable now.
+- `gvm update` ignores permission-bit differences when deciding whether the tree
+  is dirty, so an install copied onto a filesystem that does not keep modes is
+  still updatable.
+
+### Tests
+
+769 assertions in 17 files, up from 664 in 16. The new file builds real
+repositories out of the real gvm tree and runs real `git` against them, with the
+"remote" being a directory, so `gvm update` is tested without a network.
+
 ## 1.1.0 - 2026-09-26
 
 Version 1.1.0 rather than 1.0.23 because the release list, the installer and
