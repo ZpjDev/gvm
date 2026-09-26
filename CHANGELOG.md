@@ -52,6 +52,11 @@ list, the installer and the test suite were replaced, not patched.
 
 ### Commands
 
+- The `cd` override kept the user's own `cd` by lifting its body out of
+  `declare -f cd` output: delete the first line, delete the last. That keeps the
+  opening brace and drops the closing one, so the `eval` failed, `__gvm_oldcd`
+  was never defined, and `cd` stopped changing directory - silently, and only for
+  anyone who had a `cd` function. It renames the definition now.
 - New: `gvm doctor`, `gvm ls-remote`, `gvm applymod`, `gvm which`, `gvm delete`.
 - Rewritten: `gvm install`, `gvm use`, `gvm pkgset`, `gvm diff`, `gvm help`,
   `gvm linkthis`, `gvm pkgenv`, `gvm completion`, `gvm display`.
@@ -79,8 +84,12 @@ list, the installer and the test suite were replaced, not patched.
 ### Documentation and tests
 
 - `README.md` rewritten, and a Chinese translation added.
-- The suite is 660 assertions of plain bash with no external framework, one file
+- The suite is 664 assertions of plain bash with no external framework, one file
   per area, each building a throwaway `GVM_ROOT`. It fails if a test writes to
   the developer's real `~/.bashrc` or `~/.zshrc`, and it runs under
   `LC_ALL=C` so a non-English locale cannot hide a failure.
 - GitHub Actions runs lint and tests on Linux and on macOS, whose `bash` is 3.2.
+  The runner streams each test file's output instead of capturing it, so a hang
+  says which file hung, and the check that the suite left the developer's real
+  `~/.bashrc` and `~/.zshrc` alone uses `cmp` on copies: `md5sum` does not exist
+  on macOS, so that guard was doing nothing there.

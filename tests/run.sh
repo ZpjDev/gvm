@@ -55,10 +55,15 @@ start=$SECONDS
 
 for file in "${files[@]}"; do
 	printf '%s==> %s%s\n' "$BOLD" "$file" "$RESET"
+	# Streamed through tee rather than captured in one $(...): a capture prints
+	# nothing at all until the file finishes, so a test file that hangs - or takes
+	# ten minutes to fail - shows up as silence with no clue where it stopped.
 	# A test that reads stdin must fail, not hang the whole suite.
-	out="$(bash "$file" < /dev/null 2>&1)"
-	status=$?
-	printf '%s\n' "$out" | sed 's/^/    /'
+	log="$(mktemp "${TMPDIR:-/tmp}/gvm-test-log.XXXXXX")"
+	bash "$file" < /dev/null 2>&1 | tee "$log" | sed 's/^/    /'
+	status="${PIPESTATUS[0]}"
+	out="$(cat "$log")"
+	rm -f "$log"
 	line="$(printf '%s\n' "$out" | grep -E '^[0-9]+ passed' | tail -1)"
 	pass="$(printf '%s' "$line" | sed -n 's/^\([0-9]*\) passed.*/\1/p')"
 	fail="$(printf '%s' "$line" | sed -n 's/.*, \([0-9]*\) failed.*/\1/p')"

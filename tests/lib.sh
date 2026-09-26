@@ -226,40 +226,48 @@ summary() {
 # their job. Tests that ran those with the real HOME took the line out of a real
 # ~/.zshrc, which is what this check exists to make impossible to miss again.
 #
-# The snapshot is a file for `md5sum -c` rather than a variable: md5sum prints
-# "hash  -" for standard input, and a variable of "name:hash" pairs does not
-# survive word splitting.
+# The snapshot is a directory of copies compared with `cmp`, not a list of
+# md5sums. macOS has no md5sum - brew's coreutils installs it as gmd5sum - so a
+# guard built on it quietly did nothing on the one platform where a developer is
+# most likely to have a real ~/.zshrc to lose. cmp is in POSIX.
+#
+# The real path of each copy is recorded in a manifest rather than rebuilt from
+# $HOME at check time, because a test that points HOME at a fake home (which
+# implode tests must) would otherwise make every real profile look deleted.
 gvm_test_watch_real_profiles() {
 	# Once per test file, not once per sandbox: a file that calls `sandbox` again
 	# after pointing HOME somewhere else must keep watching the developer's real
 	# home, which is the whole point.
 	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && return 0
-	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp "${TMPDIR:-/tmp}/gvm-home.XXXXXX")"
-	local f
-	: > "$GVM_TEST_PROFILE_SNAPSHOT"
+	GVM_TEST_PROFILE_SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/gvm-home.XXXXXX")"
+	: > "$GVM_TEST_PROFILE_SNAPSHOT/manifest"
+	local f n=0
 	for f in .bashrc .zshrc .profile .bash_profile .zprofile .zshenv; do
-		[ -f "$HOME/$f" ] || continue
-		md5sum "$HOME/$f" >> "$GVM_TEST_PROFILE_SNAPSHOT" 2> /dev/null
+		# A file that cannot be read must not stop the run; leaving it out of
+		# the manifest means the guard makes no claim about it.
+		[ -f "$HOME/$f" ] && cp "$HOME/$f" "$GVM_TEST_PROFILE_SNAPSHOT/$n" 2> /dev/null || continue
+		printf '%s\t%s\n' "$n" "$HOME/$f" >> "$GVM_TEST_PROFILE_SNAPSHOT/manifest"
+		n=$((n + 1))
 	done
 	export GVM_TEST_PROFILE_SNAPSHOT
 }
 
 gvm_test_profiles_unchanged() {
-	local snap line
+	local snap copy path changed=0
 	snap="${GVM_TEST_PROFILE_SNAPSHOT:-}"
-	[ -s "$snap" ] || return 0
-	md5sum -c --status "$snap" 2> /dev/null && return 0
-	printf '\n  FAIL  a test wrote to your real home directory:\n'
-	# md5sum -c prints "<path>: FAILED", or nothing at all for a file that has
-	# been deleted, so both are reported from the snapshot itself.
-	while read -r hash path; do
-		[ -n "$path" ] || continue
+	[ -s "$snap/manifest" ] || return 0
+	while IFS="$(printf '\t')" read -r copy path; do
+		[ -n "$copy" ] && [ -n "$path" ] || continue
 		if [ ! -f "$path" ]; then
 			printf '          %s (deleted)\n' "$path"
-		elif [ "$(md5sum < "$path" 2> /dev/null | cut -d' ' -f1)" != "$hash" ]; then
+			changed=1
+		elif ! cmp -s "$snap/$copy" "$path"; then
 			printf '          %s (changed)\n' "$path"
+			changed=1
 		fi
-	done < "$snap"
+	done < "$snap/manifest"
+	[ "$changed" = 0 ] && return 0
+	printf '\n  FAIL  a test wrote to your real home directory:\n'
 	printf '        GVM_ROOT is sandboxed but HOME is not, and implode and\n'
 	printf '        install.sh --uninstall edit the gvm line in these files.\n'
 	return 1
@@ -350,7 +358,7 @@ gvm_test_sandbox_teardown() {
 	# does, and run.sh treats a non-zero status as a failure.
 	gvm_test_profiles_unchanged || status=1
 	[ -n "${GVM_TEST_SANDBOX:-}" ] && rm -rf "$GVM_TEST_SANDBOX"
-	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && rm -f "$GVM_TEST_PROFILE_SNAPSHOT"
+	[ -n "${GVM_TEST_PROFILE_SNAPSHOT:-}" ] && rm -rf "$GVM_TEST_PROFILE_SNAPSHOT"
 	[ "$status" = 0 ] && return 0
 	printf '  FAIL  this test file changed files in your real home directory\n'
 	exit 1

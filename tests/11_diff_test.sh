@@ -65,7 +65,10 @@ after="$(ls "${TMPDIR:-/tmp}" | wc -l | tr -d ' ')"
 assert_eq "$before" "$after"
 
 t "diff follows the current version when given nothing"
+# Asserted separately: if the use fails, the diff below fails too and the
+# failure points at the wrong line.
 capture_in_shell out gvm use 1.24.13
+assert_eq 0 "$CAPTURE_STATUS"
 capture out gvm diff
 assert_eq 0 "$CAPTURE_STATUS"
 

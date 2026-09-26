@@ -32,19 +32,31 @@ _gvm_cd_capture_original() {
 	fi
 
 	if __gvm_is_function cd; then
-		local declaration body
+		# Rename the definition instead of lifting the body out of it. Taking
+		# the body meant deleting the first and last line and assuming the
+		# braces sit where bash 5 puts them:
+		#
+		#   cd ()        <- dropped
+		#   {            <- kept, and it should not have been
+		#       ...
+		#   }            <- dropped
+		#
+		# which evals to unbalanced braces, fails, and leaves __gvm_oldcd
+		# undefined. cd() then skips the real cd and silently stops changing
+		# directory, in every shell, for anyone who had a cd of their own.
+		local declaration renamed=""
 		declaration="$(declare -f cd)"
-		# Drop the `cd () {` header and the closing brace, keeping the body.
-		body="$(printf '%s\n' "$declaration" | sed -n '2,$p' | sed '$d')"
-		if [ -n "$body" ]; then
-			eval "__gvm_oldcd() {
-$body
-}"
+		case "$declaration" in
+			'cd ()'*) renamed="__gvm_oldcd ()${declaration#cd ()}" ;;
+			'cd()'*) renamed="__gvm_oldcd()${declaration#cd()}" ;;
+		esac
+		if [ -n "$renamed" ] && eval "$renamed" 2> /dev/null &&
+			__gvm_is_function __gvm_oldcd; then
 			return 0
 		fi
 	fi
 
-	# Either cd was the builtin, or the user's function had an empty body.
+	# Either cd was the builtin, or the user's function could not be copied.
 	eval '__gvm_oldcd() { builtin cd "$@"; return $?; }'
 }
 

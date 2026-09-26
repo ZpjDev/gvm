@@ -61,6 +61,23 @@ cd "$work/repo" && cd . || _fail "cd failed"
 assert_eq proj "${gvm_pkgset_name:-}"
 rm -f "$work/repo/.go-pkgset" "$work/repo/.go-version"
 
+t "a cd of the user's own keeps working under the override"
+# The old capture copied the body by deleting the first and last line of
+# `declare -f cd`, which keeps the opening brace and drops the closing one. The
+# eval failed, __gvm_oldcd was never defined, and cd() stopped changing
+# directory for anyone who had a cd function of their own - silently, and only
+# in that case.
+user_cd_calls=""
+# The user's own cd, defined before gvm is sourced, which is the case that broke.
+cd() { user_cd_calls="yes"; builtin cd "$@" || return $?; }
+unset -f __gvm_oldcd # so env/cd captures, as it does in a fresh shell
+. "$GVM_ROOT/scripts/env/cd"
+assert_contains "$(declare -f __gvm_oldcd 2> /dev/null)" "user_cd_calls"
+cd "$work/other"
+assert_eq "$work/other" "$PWD"  # the real cd happened
+assert_eq yes "$user_cd_calls" # and so did the user's
+builtin cd "$work" || _fail "cd back failed"
+
 t "env/cd survives being sourced twice"
 # Re-sourcing used to capture gvm's own override as the "original" cd, so cd()
 # recursed until bash segfaulted.

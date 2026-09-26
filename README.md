@@ -288,7 +288,7 @@ This fork is a rewrite of the parts that had aged, keeping the interface:
   `gvm ls-remote` (what is published), `gvm applymod` (switch to whatever a
   `go.mod` asks for, treating it as the minimum it is), `gvm which`, `gvm
   delete`, and a rewritten `gvm diff` and `gvm help`.
-- **The test suite** is 660 assertions of plain bash with no framework, each
+- **The test suite** is 664 assertions of plain bash with no framework, each
   file building its own throwaway `GVM_ROOT`. It also fails if a test writes to
   your real `~/.bashrc` or `~/.zshrc`. GitHub Actions runs it on Linux and on
   macOS, whose `bash` is 3.2.

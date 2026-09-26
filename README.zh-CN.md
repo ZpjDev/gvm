@@ -270,7 +270,7 @@ WARNING: *Dirty* /home/you/.gvm/gos/go1.24.13
 - **新命令**：`gvm doctor`（这台安装哪里不对）、`gvm ls-remote`（官方发布了什么）、
   `gvm applymod`（按 `go.mod` 切到满足它的版本，把它当成最低要求）、`gvm which`、
   `gvm delete`，以及重写的 `gvm diff` 和 `gvm help`。
-- **测试套件**是 660 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
+- **测试套件**是 664 条断言的纯 bash，不依赖任何框架，每个文件自己建一个一次性
   `GVM_ROOT`；如果测试改到了你真实的 `~/.bashrc` 或 `~/.zshrc`，它会直接失败。
   GitHub Actions 在 Linux 和 macOS 上都跑，macOS 的 `bash` 是 3.2。
 - **中文文档**（就是本文件）和一份完整的 `CHANGELOG.md`。
