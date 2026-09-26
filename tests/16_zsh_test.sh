@@ -11,8 +11,11 @@ gvm_test_sandbox go1.24.13 go1.27.1
 trap gvm_test_sandbox_teardown EXIT
 
 if ! command -v zsh > /dev/null 2>&1; then
-	t "zsh is not installed, so there is nothing to check"
-	skip_summary
+	# Nothing to check, and no assertion to count, so say so and stop. This
+	# branch runs on every machine without zsh and used to die with "skip_summary:
+	# command not found", which failed the file it was skipping.
+	printf 'zsh is not installed, so there is nothing to check\n'
+	printf '0 passed, 0 failed\n'
 	exit 0
 fi
 

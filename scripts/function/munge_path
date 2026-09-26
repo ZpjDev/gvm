@@ -77,7 +77,12 @@ __gvm_munge_path() {
     unset _path
 
     # assemble path array
-    path_out_ary=( ${rvm_ary[@]} ${gvm_ary[@]} ${general_ary[@]} )
+    # ${ary[@]:-} rather than ${ary[@]}: bash 3.2 - still the default on macOS -
+    # treats an empty array as unset, so under `set -u` an unset PATH segment
+    # aborts the shell instead of contributing nothing. The :- default is only
+    # taken when a group is empty, and it is a single empty word, which word
+    # splitting discards.
+    path_out_ary=( ${rvm_ary[@]:-} ${gvm_ary[@]:-} ${general_ary[@]:-} )
 
     # deduplicate path_out_ary if requested, do this just to be helpful :)
     if [[ "${path_dedupe_flag}" == true ]]

@@ -199,7 +199,7 @@ __gvm_use() {
                 __key="${accumulator[i]}"
                 __val="${accumulator[i+1]}"
 
-                options_hash=( $(setValueForKeyFakeAssocArray "${__key}" "${__val}" "${options_hash[*]}") )
+                options_hash=( $(setValueForKeyFakeAssocArray "${__key}" "${__val}" "${options_hash[*]:-}") )
                 unset __key __val
             done
             accumulator=()
@@ -214,14 +214,14 @@ __gvm_use() {
         for _item in "${options_hash[@]}"
         do
             local __key="${_item%%:*}"
-            local __val="$(valueForKeyFakeAssocArray "${__key}" "${options_hash[*]}")"
+            local __val="$(valueForKeyFakeAssocArray "${__key}" "${options_hash[*]:-}")"
             printf "  [%s]: %s\n" "${__key}" "${__val}"
             unset __key __val
         done
         unset _item
     fi
 
-    local version="$(valueForKeyFakeAssocArray "--version" "${options_hash[*]}")"
+    local version="$(valueForKeyFakeAssocArray "--version" "${options_hash[*]:-}")"
 
     if [[ -z "${version}" ]]
     then
@@ -250,12 +250,12 @@ __gvm_use() {
         # scripts/function/gvm_export_path.
         unset GOTOOLCHAIN
 
-        if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]}")" ]]
+        if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]:-}")" ]]
         then
             display_warning "Can't make 'system' the default; gvm only defaults to versions it manages."
         fi
 
-        [[ -z "$(valueForKeyFakeAssocArray "--quiet" "${options_hash[*]}")" ]] &&
+        [[ -z "$(valueForKeyFakeAssocArray "--quiet" "${options_hash[*]:-}")" ]] &&
             display_message "Now using the system Go ($GOROOT)"
         return 0
     fi
@@ -324,17 +324,17 @@ __gvm_use() {
     export PATH="${fixed_path}"
     unset fixed_path
 
-    if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]}")" ]]
+    if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]:-}")" ]]
     then
         cp "$GVM_ROOT/environments/$fuzzy_match" "$GVM_ROOT/environments/default"
         [[ $? -ne 0 ]] && display_error "Couldn't make $fuzzy_match default"
     fi
 
-    local pkgset="$(valueForKeyFakeAssocArray "--pkgset" "${options_hash[*]}")"
+    local pkgset="$(valueForKeyFakeAssocArray "--pkgset" "${options_hash[*]:-}")"
     if [[ -n "${pkgset}" ]]
     then
-        local pkgset_args=( "$(valueForKeyFakeAssocArray "--pkgset" "${options_hash[*]}")" )
-        if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]}")" ]]
+        local pkgset_args=( "$(valueForKeyFakeAssocArray "--pkgset" "${options_hash[*]:-}")" )
+        if [[ -n "$(valueForKeyFakeAssocArray "--default" "${options_hash[*]:-}")" ]]
         then
             pkgset_args+=( "--default" )
         fi
@@ -344,7 +344,7 @@ __gvm_use() {
     fi
     unset pkgset
 
-    if [[ -z "$(valueForKeyFakeAssocArray "--quiet" "${options_hash[*]}")" ]]; then
+    if [[ -z "$(valueForKeyFakeAssocArray "--quiet" "${options_hash[*]:-}")" ]]; then
         display_message "Now using version $fuzzy_match"
     fi
 

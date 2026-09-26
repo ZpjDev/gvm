@@ -52,6 +52,14 @@ list, the installer and the test suite were replaced, not patched.
 
 ### Commands
 
+- Bash 3.2 is still the default `bash` on macOS, and under `set -u` it treats an
+  empty array as unset. `gvm use 1.24.13` passed `${options_hash[*]}` with the
+  array still empty, so the shell died with `options_hash[*]: unbound variable`
+  before the version was selected - on every `gvm use`, and, because the user's
+  shell is where that happens, on the way in. Same shape in `gvm pkgsetuse` and
+  in `munge_path`'s PATH assembly. 23 expansions now carry a default.
+- The zsh test's "no zsh installed" branch called a function that does not
+  exist, so skipping the test failed the file that skipped it.
 - The `cd` override kept the user's own `cd` by lifting its body out of
   `declare -f cd` output: delete the first line, delete the last. That keeps the
   opening brace and drops the closing one, so the `eval` failed, `__gvm_oldcd`
