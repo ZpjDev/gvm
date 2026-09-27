@@ -59,10 +59,15 @@ rm -f /tmp/manifest.test
 manifest go1.24.13
 gvm diff 1.24.13 > /dev/null 2>&1
 assert_eq "" "$(ls /tmp/manifest.test 2> /dev/null)"
-before="$(ls "${TMPDIR:-/tmp}" | wc -l | tr -d ' ')"
-gvm diff 1.24.13 > /dev/null 2>&1
-after="$(ls "${TMPDIR:-/tmp}" | wc -l | tr -d ' ')"
-assert_eq "$before" "$after"
+# A TMPDIR of this test's own, so the check is about gvm diff and not about
+# whatever else on the machine is writing to a shared /tmp. Counting a shared
+# directory before and after failed once here for exactly that reason, and did
+# not reproduce in eight later runs - the worst kind of failure to leave behind.
+private_tmp="$GVM_TEST_TMP/diff-tmp"
+mkdir -p "$private_tmp"
+TMPDIR="$private_tmp" gvm diff 1.24.13 > /dev/null 2>&1
+assert_eq "0" "$(ls -A "$private_tmp" 2> /dev/null | wc -l | tr -d ' ')" \
+	"gvm diff left its temporary directory behind"
 
 t "diff follows the current version when given nothing"
 # Asserted separately: if the use fails, the diff below fails too and the
